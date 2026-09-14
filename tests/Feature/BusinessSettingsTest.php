@@ -20,7 +20,7 @@ class BusinessSettingsTest extends TestCase
         $user = User::factory()->create();
         $business = Business::create([
             'name' => "Mike's Fashion",
-            'slug' => Business::generateUniqueSlug("Mike's Fashion"),
+            'handle' => Business::generateUniqueHandle("Mike's Fashion"),
             'owner_id' => $user->id,
         ]);
         $business->setting()->create([]);
@@ -41,22 +41,22 @@ class BusinessSettingsTest extends TestCase
         Storage::disk('public')->assertExists($business->setting->logo);
     }
 
-    public function test_the_business_slug_cannot_be_changed_from_the_settings_form(): void
+    public function test_the_business_handle_cannot_be_changed_from_the_settings_form(): void
     {
         $user = User::factory()->create();
         $business = Business::create([
             'name' => "Mike's Fashion",
-            'slug' => Business::generateUniqueSlug("Mike's Fashion"),
+            'handle' => Business::generateUniqueHandle("Mike's Fashion"),
             'owner_id' => $user->id,
         ]);
         $business->setting()->create([]);
 
         $this->actingAs($user)->put('/settings', [
             'name' => 'Mike’s Fashion Store',
-            'slug' => 'a-different-slug',
+            'handle' => 'a-different-handle',
         ]);
 
-        $this->assertSame('mikes-fashion', $business->fresh()->slug);
+        $this->assertSame('mikes-fashion', $business->fresh()->handle);
     }
 
     public function test_a_user_cannot_view_or_modify_another_users_business_data(): void
@@ -64,7 +64,7 @@ class BusinessSettingsTest extends TestCase
         $ownerA = User::factory()->create();
         $businessA = Business::create([
             'name' => 'Business A',
-            'slug' => Business::generateUniqueSlug('Business A'),
+            'handle' => Business::generateUniqueHandle('Business A'),
             'owner_id' => $ownerA->id,
         ]);
         $businessA->setting()->create(['whatsapp_number' => '+1000000000']);
@@ -72,7 +72,7 @@ class BusinessSettingsTest extends TestCase
         $ownerB = User::factory()->create();
         $businessB = Business::create([
             'name' => 'Business B',
-            'slug' => Business::generateUniqueSlug('Business B'),
+            'handle' => Business::generateUniqueHandle('Business B'),
             'owner_id' => $ownerB->id,
         ]);
         $businessB->setting()->create(['whatsapp_number' => '+2000000000']);

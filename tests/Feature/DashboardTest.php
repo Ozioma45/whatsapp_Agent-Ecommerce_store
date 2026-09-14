@@ -17,7 +17,7 @@ class DashboardTest extends TestCase
 
         $business = Business::create([
             'name' => "Mike's Fashion",
-            'slug' => Business::generateUniqueSlug("Mike's Fashion"),
+            'handle' => Business::generateUniqueHandle("Mike's Fashion"),
             'owner_id' => $user->id,
         ]);
         $business->setting()->create(['whatsapp_number' => '+2348012345678']);
@@ -28,7 +28,7 @@ class DashboardTest extends TestCase
         $response->assertSee("Mike's Fashion");
         $response->assertSee('Mike Owner');
         $response->assertSee($user->email);
-        $response->assertSee($business->slug);
+        $response->assertSee($business->handle);
         $response->assertSee('+2348012345678');
     }
 }

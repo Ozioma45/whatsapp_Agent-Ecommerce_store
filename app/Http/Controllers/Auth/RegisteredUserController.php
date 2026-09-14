@@ -43,7 +43,7 @@ class RegisteredUserController extends Controller
 
         $business = Business::create([
             'name' => $validated['business_name'],
-            'slug' => Business::generateUniqueSlug($validated['business_name']),
+            'handle' => Business::generateUniqueHandle($validated['business_name']),
             'owner_id' => $user->id,
         ]);
 

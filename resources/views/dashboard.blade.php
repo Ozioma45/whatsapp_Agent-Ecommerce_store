@@ -20,8 +20,14 @@
                 <dd class="text-sm text-gray-900">{{ auth()->user()->email }}</dd>
             </div>
             <div class="flex justify-between py-3">
-                <dt class="text-sm font-medium text-gray-500">Store slug</dt>
-                <dd class="text-sm text-gray-900">/store/{{ $business->slug }}</dd>
+                <dt class="text-sm font-medium text-gray-500">Store handle</dt>
+                <dd class="text-sm text-gray-900">{{ $business->handle }}</dd>
+            </div>
+            <div class="flex justify-between py-3">
+                <dt class="text-sm font-medium text-gray-500">Store URL</dt>
+                <dd class="text-sm text-gray-900">
+                    <a href="{{ $business->publicUrl() }}" class="text-gray-900 underline" target="_blank">{{ $business->publicUrl() }}</a>
+                </dd>
             </div>
             <div class="flex justify-between py-3">
                 <dt class="text-sm font-medium text-gray-500">WhatsApp number</dt>

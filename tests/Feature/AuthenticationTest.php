@@ -22,7 +22,7 @@ class AuthenticationTest extends TestCase
 
         Business::create([
             'name' => "Mike's Fashion",
-            'slug' => Business::generateUniqueSlug("Mike's Fashion"),
+            'handle' => Business::generateUniqueHandle("Mike's Fashion"),
             'owner_id' => $user->id,
         ])->setting()->create([]);
 

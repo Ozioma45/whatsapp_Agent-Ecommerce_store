@@ -9,10 +9,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'slug', 'owner_id'])]
+#[Fillable(['name', 'handle', 'owner_id'])]
 class Business extends Model
 {
     use HasFactory;
+
+    /**
+     * Handles that could conflict with the main application or future
+     * system routes, and so can never be assigned to a business.
+     *
+     * @var array<int, string>
+     */
+    public const RESERVED_HANDLES = [
+        'www', 'app', 'admin', 'api', 'dashboard', 'login', 'register', 'support', 'help',
+    ];
 
     /**
      * The user who owns this business.
@@ -31,20 +41,39 @@ class Business extends Model
     }
 
     /**
-     * Generate a unique, URL-friendly slug from a business name,
-     * appending "-2", "-3", etc. when the base slug is already taken.
+     * Use the handle (not the id) when this model is resolved from a route,
+     * so public store URLs and route-model binding work off the handle.
      */
-    public static function generateUniqueSlug(string $name): string
+    public function getRouteKeyName(): string
+    {
+        return 'handle';
+    }
+
+    /**
+     * The public store URL for this business, built from its handle and
+     * the platform's configured base domain.
+     */
+    public function publicUrl(): string
+    {
+        return route('store.show', ['business' => $this->handle]);
+    }
+
+    /**
+     * Generate a unique, URL/subdomain-safe handle from a business name,
+     * appending "-2", "-3", etc. when the base handle is already taken or
+     * reserved for platform use.
+     */
+    public static function generateUniqueHandle(string $name): string
     {
         $base = Str::slug($name);
-        $slug = $base;
+        $handle = $base;
         $suffix = 2;
 
-        while (static::where('slug', $slug)->exists()) {
-            $slug = "{$base}-{$suffix}";
+        while (in_array($handle, self::RESERVED_HANDLES, true) || static::where('handle', $handle)->exists()) {
+            $handle = "{$base}-{$suffix}";
             $suffix++;
         }
 
-        return $slug;
+        return $handle;
     }
 }

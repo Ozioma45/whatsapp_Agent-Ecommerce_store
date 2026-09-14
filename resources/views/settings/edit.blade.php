@@ -15,8 +15,15 @@
             @method('PUT')
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Store slug</label>
-                <p class="mt-1 text-sm text-gray-500">/store/{{ $business->slug }} (cannot be changed here)</p>
+                <label class="block text-sm font-medium text-gray-700">Store handle</label>
+                <p class="mt-1 text-sm text-gray-500">{{ $business->handle }} (cannot be changed here)</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Your store</label>
+                <p class="mt-1 text-sm text-gray-500">
+                    <a href="{{ $business->publicUrl() }}" class="text-gray-900 underline" target="_blank">{{ $business->publicUrl() }}</a>
+                </p>
             </div>
 
             <div>
