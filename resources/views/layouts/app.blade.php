@@ -16,7 +16,17 @@
                 </a>
 
                 <nav class="flex items-center gap-4 text-sm">
-                    @yield('nav')
+                    @auth
+                        <a href="{{ route('dashboard') }}" class="text-gray-700 hover:text-gray-900">Dashboard</a>
+                        <a href="{{ route('settings.edit') }}" class="text-gray-700 hover:text-gray-900">Store Settings</a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="text-gray-700 hover:text-gray-900">Logout</button>
+                        </form>
+                    @else
+                        <a href="{{ route('login') }}" class="text-gray-700 hover:text-gray-900">Log in</a>
+                        <a href="{{ route('register') }}" class="rounded-md bg-gray-900 px-3 py-1.5 text-white hover:bg-gray-700">Register</a>
+                    @endauth
                 </nav>
             </div>
         </header>
