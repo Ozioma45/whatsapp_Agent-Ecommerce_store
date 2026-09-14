@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStoreController;
 use App\Http\Controllers\Settings\StoreSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +28,9 @@ Route::domain(config('app.domain'))->group(function () {
 
         Route::get('settings', [StoreSettingsController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [StoreSettingsController::class, 'update'])->name('settings.update');
+
+        Route::resource('categories', CategoryController::class)->except('show');
+        Route::resource('products', ProductController::class)->except('show');
 
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     });
