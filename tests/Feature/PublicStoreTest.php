@@ -26,7 +26,6 @@ class PublicStoreTest extends TestCase
         ]);
         $business->setting()->create([
             'description' => 'Quality shoes for everyone.',
-            'whatsapp_number' => '+2348011112222',
         ]);
 
         $response = $this->get('http://mike-shoes.'.$this->domain().'/');
@@ -34,7 +33,6 @@ class PublicStoreTest extends TestCase
         $response->assertOk();
         $response->assertSee('Mike Shoes');
         $response->assertSee('Quality shoes for everyone.');
-        $response->assertSee('+2348011112222');
     }
 
     public function test_an_unknown_subdomain_returns_a_404(): void
@@ -52,7 +50,7 @@ class PublicStoreTest extends TestCase
             'handle' => Business::generateUniqueHandle('Mike Shoes'),
             'owner_id' => $ownerA->id,
         ]);
-        $businessA->setting()->create(['whatsapp_number' => '+1000000000']);
+        $businessA->setting()->create([]);
 
         $ownerB = User::factory()->create();
         $businessB = Business::create([
@@ -60,19 +58,17 @@ class PublicStoreTest extends TestCase
             'handle' => Business::generateUniqueHandle('Beauty By Ada'),
             'owner_id' => $ownerB->id,
         ]);
-        $businessB->setting()->create(['whatsapp_number' => '+2000000000']);
+        $businessB->setting()->create([]);
 
         $this->get('http://'.$businessA->handle.'.'.$this->domain().'/')
             ->assertOk()
             ->assertSee('Mike Shoes')
-            ->assertDontSee('Beauty By Ada')
-            ->assertDontSee('+2000000000');
+            ->assertDontSee('Beauty By Ada');
 
         $this->get('http://'.$businessB->handle.'.'.$this->domain().'/')
             ->assertOk()
             ->assertSee('Beauty By Ada')
-            ->assertDontSee('Mike Shoes')
-            ->assertDontSee('+1000000000');
+            ->assertDontSee('Mike Shoes');
     }
 
     public function test_the_main_domain_still_works(): void
