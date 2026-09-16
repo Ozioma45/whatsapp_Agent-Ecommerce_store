@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -39,4 +40,10 @@ Route::domain(config('app.domain'))->group(function () {
 // Business subdomains: the public store, resolved by handle. {business}.{app.domain}
 Route::domain('{business}.'.config('app.domain'))->group(function () {
     Route::get('/', [PublicStoreController::class, 'show'])->name('store.show');
+
+    Route::get('cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('cart/{product}', [CartController::class, 'store'])->name('cart.store');
+    Route::patch('cart/{product}', [CartController::class, 'update'])->name('cart.update');
+    Route::delete('cart/{product}', [CartController::class, 'destroy'])->name('cart.destroy');
+    Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
 });

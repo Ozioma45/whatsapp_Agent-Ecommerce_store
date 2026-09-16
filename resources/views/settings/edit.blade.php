@@ -60,7 +60,7 @@
 
                 @if ($business->setting?->logo)
                     <img src="{{ \Illuminate\Support\Facades\Storage::url($business->setting->logo) }}" alt="Current logo"
-                        class="mt-2 h-16 w-16 rounded-md object-cover">
+                        class="mt-2 h-12 w-12 rounded-md object-cover">
                 @endif
 
                 <input type="file" name="logo" accept="image/*"

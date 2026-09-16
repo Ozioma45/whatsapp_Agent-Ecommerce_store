@@ -3,6 +3,10 @@
 @section('title', $business->name . ' — ' . config('app.name'))
 
 @section('content')
+    @if (session('status'))
+        <p class="mb-6 rounded-md bg-green-50 px-4 py-3 text-center text-sm text-green-700">{{ session('status') }}</p>
+    @endif
+
     <div class="mb-10 text-center">
         <h1 class="text-3xl font-semibold">{{ $business->name }}</h1>
 
@@ -55,7 +59,16 @@
                             <p class="mt-2 text-sm text-gray-600">{{ $product->description }}</p>
                         @endif
 
-                        <p class="mt-3 font-semibold text-gray-900">{{ number_format($product->price, 2) }}</p>
+                        <div class="mt-3 flex items-center justify-between gap-2">
+                            <p class="font-semibold text-gray-900">{{ number_format($product->price, 2) }}</p>
+
+                            <form method="POST" action="{{ route('cart.store', ['business' => $business->handle, 'product' => $product->id]) }}">
+                                @csrf
+                                <button type="submit" class="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700">
+                                    Add to Cart
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             @endforeach
