@@ -5,6 +5,10 @@
 @section('content')
     <h1 class="mb-6 text-2xl font-semibold">Your cart</h1>
 
+    @if (session('error'))
+        <p class="mb-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</p>
+    @endif
+
     @if ($errors->any())
         <p class="mb-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</p>
     @endif
@@ -92,11 +96,28 @@
             </div>
 
             <div class="mt-4 border-t border-gray-100 pt-4">
-                @if ($whatsappUrl)
-                    <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener"
-                        class="block w-full rounded-md bg-green-600 px-4 py-3 text-center font-medium text-white hover:bg-green-700 sm:w-auto sm:inline-block">
-                        Order via WhatsApp
-                    </a>
+                @if ($hasWhatsappNumber)
+                    <form method="POST" action="{{ route('cart.checkout', ['business' => $business->handle]) }}" class="space-y-3">
+                        @csrf
+
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <label for="customer_name" class="block text-xs font-medium text-gray-500">Your name (optional)</label>
+                                <input id="customer_name" type="text" name="customer_name" value="{{ old('customer_name') }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                            </div>
+                            <div>
+                                <label for="customer_phone" class="block text-xs font-medium text-gray-500">Your WhatsApp number (optional)</label>
+                                <input id="customer_phone" type="text" name="customer_phone" value="{{ old('customer_phone') }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                            class="block w-full rounded-md bg-green-600 px-4 py-3 text-center font-medium text-white hover:bg-green-700 sm:w-auto">
+                            Order via WhatsApp
+                        </button>
+                    </form>
                 @else
                     <p class="text-sm text-gray-500">This store hasn't set up WhatsApp ordering yet.</p>
                 @endif

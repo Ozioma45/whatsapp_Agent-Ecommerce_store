@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStoreController;
 use App\Http\Controllers\Settings\StoreSettingsController;
@@ -32,6 +33,7 @@ Route::domain(config('app.domain'))->group(function () {
 
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('products', ProductController::class)->except('show');
+        Route::resource('orders', OrderController::class)->only(['index', 'show', 'update']);
 
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     });
@@ -46,4 +48,6 @@ Route::domain('{business}.'.config('app.domain'))->group(function () {
     Route::patch('cart/{product}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('cart/{product}', [CartController::class, 'destroy'])->name('cart.destroy');
     Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
+
+    Route::post('checkout', [CartController::class, 'checkout'])->name('cart.checkout');
 });

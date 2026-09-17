@@ -58,6 +58,14 @@ class Business extends Model
     }
 
     /**
+     * The orders placed with this business.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
      * Use the handle (not the id) when this model is resolved from a route,
      * so public store URLs and route-model binding work off the handle.
      */

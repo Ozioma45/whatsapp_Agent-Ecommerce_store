@@ -18,6 +18,7 @@
                 <nav class="flex items-center gap-4 text-sm">
                     @auth
                         <a href="{{ route('dashboard') }}" class="text-gray-700 hover:text-gray-900">Dashboard</a>
+                        <a href="{{ route('orders.index') }}" class="text-gray-700 hover:text-gray-900">Orders</a>
                         <a href="{{ route('products.index') }}" class="text-gray-700 hover:text-gray-900">Products</a>
                         <a href="{{ route('categories.index') }}" class="text-gray-700 hover:text-gray-900">Categories</a>
                         <a href="{{ route('settings.edit') }}" class="text-gray-700 hover:text-gray-900">Store Settings</a>

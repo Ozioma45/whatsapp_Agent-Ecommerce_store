@@ -2,42 +2,29 @@
 
 namespace App\Support;
 
-use App\Models\Business;
-use App\Models\Product;
-use Illuminate\Support\Collection;
+use App\Models\Order;
 
 /**
- * Builds a WhatsApp click-to-chat URL for handing a cart off to a
+ * Builds a WhatsApp click-to-chat URL for handing a placed order off to a
  * business's WhatsApp number, with a pre-filled order message.
  *
- * This is a pure message/URL builder: it never touches the session or the
- * database itself, so it can only ever describe the exact items and
- * business it was constructed with — the caller (CartController) is
- * responsible for resolving those from the current server-side cart and
- * the current subdomain's business.
+ * This is a pure message/URL builder built entirely from an already-saved
+ * Order (and its items) — the database is the single source of truth for
+ * every product name, price, and total it prints, never anything supplied
+ * by the browser. See CartController::checkout(), which creates the order
+ * before this is ever used.
  */
 class WhatsAppOrder
 {
-    /**
-     * @param  Collection<int, array{product: Product, quantity: int, subtotal: float}>  $items
-     */
-    public function __construct(
-        private readonly Business $business,
-        private readonly Collection $items,
-        private readonly float $subtotal,
-    ) {}
+    public function __construct(private readonly Order $order) {}
 
     /**
-     * The click-to-chat URL, or null when there is nothing orderable —
-     * an empty cart, or no usable WhatsApp number configured.
+     * The click-to-chat URL, or null when the business has no usable
+     * WhatsApp number configured.
      */
     public function url(): ?string
     {
-        if ($this->items->isEmpty()) {
-            return null;
-        }
-
-        $number = self::normalizeNumber($this->business->setting?->whatsapp_number);
+        $number = self::normalizeNumber($this->order->business->setting?->whatsapp_number);
 
         if (! $number) {
             return null;
@@ -51,21 +38,39 @@ class WhatsAppOrder
      */
     public function message(): string
     {
-        $lines = ["Hello {$this->business->name}, I would like to place an order:", ''];
+        $order = $this->order;
 
-        foreach ($this->items->values() as $index => $item) {
-            $product = $item['product'];
+        $lines = [
+            "Hello {$order->business->name}, I would like to place an order.",
+            '',
+            "Order: {$order->order_number}",
+            '',
+        ];
 
-            $lines[] = ($index + 1).". {$product->name}";
-            $lines[] = "   Qty: {$item['quantity']}";
-            $lines[] = '   Price: ₦'.number_format((float) $product->price, 2);
-            $lines[] = '   Subtotal: ₦'.number_format($item['subtotal'], 2);
+        foreach ($order->items as $index => $item) {
+            $lines[] = ($index + 1).". {$item->product_name}";
+            $lines[] = "   Qty: {$item->quantity}";
+            $lines[] = '   Price: ₦'.number_format((float) $item->unit_price, 2);
+            $lines[] = '   Subtotal: ₦'.number_format((float) $item->subtotal, 2);
             $lines[] = '';
         }
 
-        $lines[] = 'Total: ₦'.number_format($this->subtotal, 2);
+        $lines[] = 'Total: ₦'.number_format((float) $order->total, 2);
         $lines[] = '';
         $lines[] = 'Please confirm availability and payment details.';
+
+        if ($order->customer_name || $order->customer_phone) {
+            $lines[] = '';
+            $lines[] = 'Customer:';
+
+            if ($order->customer_name) {
+                $lines[] = "Name: {$order->customer_name}";
+            }
+
+            if ($order->customer_phone) {
+                $lines[] = "WhatsApp: {$order->customer_phone}";
+            }
+        }
 
         return implode("\n", $lines);
     }

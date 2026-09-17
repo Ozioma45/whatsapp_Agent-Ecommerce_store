@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Business;
+use App\Models\Order;
 use App\Support\Cart;
 use App\Support\WhatsAppOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CartController extends Controller
@@ -35,8 +37,76 @@ class CartController extends Controller
             'subtotal' => $subtotal,
             'cartCount' => (int) $items->sum('quantity'),
             'itemsWereRemoved' => $cart->wasReconciled(),
-            'whatsappUrl' => (new WhatsAppOrder($business, $items, $subtotal))->url(),
+            'hasWhatsappNumber' => (bool) WhatsAppOrder::normalizeNumber($business->setting?->whatsapp_number),
         ]);
+    }
+
+    /**
+     * Turn the current cart into an order, then hand off to WhatsApp.
+     *
+     * The cart is re-validated against the database here exactly as it is
+     * for index() — nothing about product ownership, availability, or
+     * price is ever trusted from the browser. The order (and its items)
+     * are only committed, and the cart only cleared, once everything has
+     * succeeded; a failure leaves the cart untouched so the customer can
+     * simply try again.
+     */
+    public function checkout(Request $request, Business $business): RedirectResponse
+    {
+        $validated = $request->validate([
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $cart = new Cart($business);
+        $items = $cart->items();
+
+        if ($items->isEmpty()) {
+            return redirect()->route('cart.index', ['business' => $business->handle])
+                ->with('error', 'Your cart is empty.');
+        }
+
+        $subtotal = (float) $items->sum('subtotal');
+
+        try {
+            $order = DB::transaction(function () use ($business, $items, $subtotal, $validated) {
+                $order = $business->orders()->create([
+                    'order_number' => Order::generateOrderNumber(),
+                    'customer_name' => $validated['customer_name'] ?? null,
+                    'customer_phone' => $validated['customer_phone'] ?? null,
+                    'status' => Order::STATUS_PENDING,
+                    'subtotal' => $subtotal,
+                    'total' => $subtotal,
+                ]);
+
+                foreach ($items as $item) {
+                    $order->items()->create([
+                        'product_id' => $item['product']->id,
+                        'product_name' => $item['product']->name,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['product']->price,
+                        'subtotal' => $item['subtotal'],
+                    ]);
+                }
+
+                return $order;
+            });
+        } catch (\Throwable $e) {
+            return redirect()->route('cart.index', ['business' => $business->handle])
+                ->with('error', 'Something went wrong creating your order. Please try again.');
+        }
+
+        $whatsappUrl = (new WhatsAppOrder($order->load('items')))->url();
+
+        // Only clear the cart once the order has been successfully created.
+        $cart->clear();
+
+        if (! $whatsappUrl) {
+            return redirect()->route('cart.index', ['business' => $business->handle])
+                ->with('status', "Order {$order->order_number} was created, but this store hasn't set up WhatsApp ordering yet.");
+        }
+
+        return redirect($whatsappUrl);
     }
 
     /**
