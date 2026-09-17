@@ -62,9 +62,10 @@
                         <div class="mt-3 flex items-center justify-between gap-2">
                             <p class="font-semibold text-gray-900">{{ number_format($product->price, 2) }}</p>
 
-                            <form method="POST" action="{{ route('cart.store', ['business' => $business->handle, 'product' => $product->id]) }}">
+                            <form method="POST" action="{{ route('cart.store', ['business' => $business->handle, 'product' => $product->id]) }}"
+                                data-add-to-cart-form>
                                 @csrf
-                                <button type="submit" class="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700">
+                                <button type="submit" class="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700" data-add-to-cart-button>
                                     Add to Cart
                                 </button>
                             </form>

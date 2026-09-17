@@ -59,8 +59,10 @@
                 <label class="block text-sm font-medium text-gray-700">Logo</label>
 
                 @if ($business->setting?->logo)
-                    <img src="{{ \Illuminate\Support\Facades\Storage::url($business->setting->logo) }}" alt="Current logo"
-                        class="mt-2 h-12 w-12 rounded-md object-cover">
+                    <div class="mt-2 flex h-20 w-20 items-center justify-center overflow-hidden rounded-md bg-gray-100">
+                        <img src="{{ \Illuminate\Support\Facades\Storage::url($business->setting->logo) }}" alt="Current logo"
+                            class="h-full w-full object-contain">
+                    </div>
                 @endif
 
                 <input type="file" name="logo" accept="image/*"

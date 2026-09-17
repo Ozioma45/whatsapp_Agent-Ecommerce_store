@@ -81,6 +81,57 @@ class CartTest extends TestCase
         $this->get($this->url($businessA, 'cart'))->assertSee('Your cart is empty.');
     }
 
+    // --- Async add-to-cart (JSON) -----------------------------------------
+
+    public function test_a_successful_json_add_to_cart_returns_the_expected_response(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create(['name' => 'Running Shoes']);
+
+        $response = $this->postJson($this->url($business, "cart/{$product->id}"));
+
+        $response->assertOk();
+        $response->assertJson(['cartCount' => 1]);
+        $response->assertJsonStructure(['message', 'cartCount']);
+    }
+
+    public function test_the_json_response_reflects_the_updated_cart_count(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create();
+
+        $this->postJson($this->url($business, "cart/{$product->id}"), ['quantity' => 2])
+            ->assertJson(['cartCount' => 2]);
+    }
+
+    public function test_adding_the_same_product_via_json_increases_its_quantity(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create();
+
+        $this->postJson($this->url($business, "cart/{$product->id}"));
+        $response = $this->postJson($this->url($business, "cart/{$product->id}"));
+
+        $response->assertJson(['cartCount' => 2]);
+    }
+
+    public function test_an_unavailable_product_is_rejected_via_json(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create(['is_available' => false]);
+
+        $this->postJson($this->url($business, "cart/{$product->id}"))->assertNotFound();
+    }
+
+    public function test_a_cross_business_product_is_rejected_via_json(): void
+    {
+        $businessA = $this->business();
+        $businessB = $this->business();
+        $productB = Product::factory()->for($businessB)->create();
+
+        $this->postJson($this->url($businessA, "cart/{$productB->id}"))->assertNotFound();
+    }
+
     // --- Cart display ---------------------------------------------------
 
     public function test_the_cart_displays_added_products(): void
@@ -134,7 +185,7 @@ class CartTest extends TestCase
         $this->post($this->url($business, "cart/{$productA->id}"), ['quantity' => 2]);
         $this->post($this->url($business, "cart/{$productB->id}"), ['quantity' => 1]);
 
-        $this->get($this->url($business, '/'))->assertSee('Cart (3)');
+        $this->get($this->url($business, '/'))->assertSee('data-cart-count>3<', false);
     }
 
     public function test_an_empty_cart_displays_correctly(): void

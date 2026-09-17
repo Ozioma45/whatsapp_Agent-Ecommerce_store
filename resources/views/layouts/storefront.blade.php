@@ -10,19 +10,21 @@
     </head>
     <body class="min-h-screen bg-gray-50 text-gray-900 antialiased flex flex-col">
         <header class="border-b border-gray-200 bg-white">
-            <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-                <div class="flex items-center gap-3">
+            <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+                <div class="flex min-w-0 items-center gap-3">
                     @if ($business->setting?->logo)
-                        <img src="{{ \Illuminate\Support\Facades\Storage::url($business->setting->logo) }}" alt="{{ $business->name }} logo"
-                            class="h-8 w-8 rounded-full object-cover">
+                        <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+                            <img src="{{ \Illuminate\Support\Facades\Storage::url($business->setting->logo) }}" alt="{{ $business->name }} logo"
+                                class="h-full w-full object-contain">
+                        </div>
                     @endif
 
-                    <span class="text-lg font-semibold">{{ $business->name }}</span>
+                    <span class="truncate text-lg font-semibold">{{ $business->name }}</span>
                 </div>
 
                 <a href="{{ route('cart.index', ['business' => $business->handle]) }}"
-                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
-                    Cart ({{ $cartCount ?? 0 }})
+                    class="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+                    Cart (<span data-cart-count>{{ $cartCount ?? 0 }}</span>)
                 </a>
             </div>
         </header>

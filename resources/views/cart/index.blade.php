@@ -9,6 +9,12 @@
         <p class="mb-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</p>
     @endif
 
+    @if ($itemsWereRemoved)
+        <p class="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            Some items in your cart are no longer available and have been removed.
+        </p>
+    @endif
+
     @if ($items->isEmpty())
         <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
             <p class="text-sm text-gray-500">Your cart is empty.</p>
@@ -67,20 +73,33 @@
             @endforeach
         </div>
 
-        <div class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white p-4">
-            <span class="text-lg font-semibold text-gray-900">Subtotal: {{ number_format($subtotal, 2) }}</span>
+        <div class="mt-6 rounded-lg border border-gray-200 bg-white p-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <span class="text-lg font-semibold text-gray-900">Subtotal: {{ number_format($subtotal, 2) }}</span>
 
-            <div class="flex items-center gap-4">
-                <a href="{{ route('store.show', ['business' => $business->handle]) }}" class="text-sm text-gray-700 underline hover:text-gray-900">
-                    Continue shopping
-                </a>
+                <div class="flex items-center gap-4">
+                    <a href="{{ route('store.show', ['business' => $business->handle]) }}" class="text-sm text-gray-700 underline hover:text-gray-900">
+                        Continue shopping
+                    </a>
 
-                <form method="POST" action="{{ route('cart.clear', ['business' => $business->handle]) }}"
-                    onsubmit="return confirm('Clear your entire cart?');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-sm text-gray-500 underline hover:text-gray-700">Clear cart</button>
-                </form>
+                    <form method="POST" action="{{ route('cart.clear', ['business' => $business->handle]) }}"
+                        onsubmit="return confirm('Clear your entire cart?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="text-sm text-gray-500 underline hover:text-gray-700">Clear cart</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4 border-t border-gray-100 pt-4">
+                @if ($whatsappUrl)
+                    <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener"
+                        class="block w-full rounded-md bg-green-600 px-4 py-3 text-center font-medium text-white hover:bg-green-700 sm:w-auto sm:inline-block">
+                        Order via WhatsApp
+                    </a>
+                @else
+                    <p class="text-sm text-gray-500">This store hasn't set up WhatsApp ordering yet.</p>
+                @endif
             </div>
         </div>
     @endif

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Business;
 use App\Support\Cart;
+use App\Support\WhatsAppOrder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -21,11 +23,19 @@ class CartController extends Controller
     {
         $cart = new Cart($business);
 
+        // Read the cart once: this is what re-validates every item against
+        // the database (dropping anything deleted/unavailable), and count
+        // and subtotal are derived from that same, already-validated set.
+        $items = $cart->items();
+        $subtotal = (float) $items->sum('subtotal');
+
         return view('cart.index', [
             'business' => $business,
-            'items' => $cart->items(),
-            'subtotal' => $cart->subtotal(),
-            'cartCount' => $cart->count(),
+            'items' => $items,
+            'subtotal' => $subtotal,
+            'cartCount' => (int) $items->sum('quantity'),
+            'itemsWereRemoved' => $cart->wasReconciled(),
+            'whatsappUrl' => (new WhatsAppOrder($business, $items, $subtotal))->url(),
         ]);
     }
 
@@ -35,8 +45,12 @@ class CartController extends Controller
      * The product id from the request is never trusted on its own — it is
      * only ever looked up scoped to the resolved business, and only an
      * available product can be added.
+     *
+     * Responds with JSON for the storefront's async "Add to Cart" button
+     * (see resources/js/app.js), or a normal redirect back for a plain
+     * form submission when JavaScript is unavailable.
      */
-    public function store(Request $request, Business $business, string $product): RedirectResponse
+    public function store(Request $request, Business $business, string $product): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'quantity' => ['nullable', 'integer', 'min:1', 'max:'.Cart::MAX_QUANTITY],
@@ -44,9 +58,19 @@ class CartController extends Controller
 
         $product = $business->products()->where('is_available', true)->findOrFail($product);
 
-        (new Cart($business))->add($product, $validated['quantity'] ?? 1);
+        $cart = new Cart($business);
+        $cart->add($product, $validated['quantity'] ?? 1);
 
-        return back()->with('status', "{$product->name} added to cart.");
+        $message = "{$product->name} added to cart.";
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => $message,
+                'cartCount' => $cart->count(),
+            ]);
+        }
+
+        return back()->with('status', $message);
     }
 
     /**

@@ -23,6 +23,12 @@ class Cart
      */
     public const MAX_QUANTITY = 99;
 
+    /**
+     * Whether the last call to items() dropped anything (a product that
+     * was deleted or became unavailable since it was added to the cart).
+     */
+    private bool $reconciled = false;
+
     public function __construct(private readonly Business $business) {}
 
     /**
@@ -88,6 +94,8 @@ class Cart
         $raw = $this->rawItems();
 
         if ($raw === []) {
+            $this->reconciled = false;
+
             return collect();
         }
 
@@ -98,8 +106,9 @@ class Cart
             ->keyBy('id');
 
         $valid = array_intersect_key($raw, $products->all());
+        $this->reconciled = $valid !== $raw;
 
-        if ($valid !== $raw) {
+        if ($this->reconciled) {
             $this->putRawItems($valid);
         }
 
@@ -108,6 +117,15 @@ class Cart
             'quantity' => $quantity,
             'subtotal' => (float) $products[$productId]->price * $quantity,
         ])->values();
+    }
+
+    /**
+     * Whether the most recent call to items() removed something that had
+     * been deleted or made unavailable since it was added.
+     */
+    public function wasReconciled(): bool
+    {
+        return $this->reconciled;
     }
 
     /**
