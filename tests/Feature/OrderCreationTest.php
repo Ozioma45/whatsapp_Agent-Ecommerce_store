@@ -38,9 +38,16 @@ class OrderCreationTest extends TestCase
         $this->post($this->url($business, "cart/{$product->id}"), ['quantity' => $quantity]);
     }
 
+    /**
+     * Checkout with valid customer details by default — pass $data to
+     * override or omit specific fields when testing that validation itself.
+     */
     private function checkout(Business $business, array $data = []): TestResponse
     {
-        return $this->post($this->url($business, 'checkout'), $data);
+        return $this->post($this->url($business, 'checkout'), array_merge([
+            'customer_name' => 'Test Customer',
+            'customer_phone' => '08012345678',
+        ], $data));
     }
 
     // --- Order creation -----------------------------------------------
@@ -125,15 +132,77 @@ class OrderCreationTest extends TestCase
         $this->assertDatabaseHas('orders', ['customer_name' => 'John', 'customer_phone' => '08012345678']);
     }
 
-    public function test_customer_name_and_phone_are_optional(): void
+    public function test_an_order_cannot_be_created_without_a_customer_name(): void
     {
         $business = $this->business();
         $product = Product::factory()->for($business)->create();
         $this->addToCart($business, $product);
 
-        $this->checkout($business);
+        $response = $this->checkout($business, ['customer_name' => '']);
 
-        $this->assertDatabaseHas('orders', ['customer_name' => null, 'customer_phone' => null]);
+        $response->assertSessionHasErrors('customer_name');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_an_order_cannot_be_created_without_a_customer_phone(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create();
+        $this->addToCart($business, $product);
+
+        $response = $this->checkout($business, ['customer_phone' => '']);
+
+        $response->assertSessionHasErrors('customer_phone');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_an_invalid_customer_phone_is_rejected(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create();
+        $this->addToCart($business, $product);
+
+        $response = $this->checkout($business, ['customer_phone' => '12345']);
+
+        $response->assertSessionHasErrors('customer_phone');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_a_valid_nigerian_phone_number_is_accepted(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create();
+        $this->addToCart($business, $product);
+
+        $response = $this->checkout($business, ['customer_phone' => '08012345678']);
+
+        $response->assertSessionDoesntHaveErrors('customer_phone');
+        $this->assertDatabaseHas('orders', ['customer_phone' => '08012345678']);
+    }
+
+    public function test_a_valid_international_phone_number_is_accepted(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create();
+        $this->addToCart($business, $product);
+
+        $response = $this->checkout($business, ['customer_phone' => '+2348012345678']);
+
+        $response->assertSessionDoesntHaveErrors('customer_phone');
+        $this->assertDatabaseHas('orders', ['customer_phone' => '+2348012345678']);
+    }
+
+    public function test_the_stored_customer_phone_is_not_silently_transformed(): void
+    {
+        $business = $this->business();
+        $product = Product::factory()->for($business)->create();
+        $this->addToCart($business, $product);
+
+        // The raw input is preserved as typed — only the *destination*
+        // WhatsApp number (the business's own) is ever normalized.
+        $this->checkout($business, ['customer_phone' => '0801 234 5678']);
+
+        $this->assertDatabaseHas('orders', ['customer_phone' => '0801 234 5678']);
     }
 
     // --- Historical data preservation -----------------------------------

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class WhatsAppOrderTest extends TestCase
@@ -38,12 +39,24 @@ class WhatsAppOrderTest extends TestCase
     }
 
     /**
+     * Checkout with valid customer details by default — pass $data to
+     * override specific fields when testing something else about checkout.
+     */
+    private function checkout(Business $business, array $data = []): TestResponse
+    {
+        return $this->post($this->url($business, 'checkout'), array_merge([
+            'customer_name' => 'Test Customer',
+            'customer_phone' => '08012345678',
+        ], $data));
+    }
+
+    /**
      * Add the given product to the cart, check out, and return the decoded
      * text of the resulting wa.me message (or null if none was generated).
      */
     private function checkoutAndDecodeMessage(Business $business, array $data = []): ?string
     {
-        $response = $this->post($this->url($business, 'checkout'), $data);
+        $response = $this->checkout($business, $data);
         $location = $response->headers->get('Location');
 
         if (! $location || ! str_starts_with($location, 'https://wa.me/')) {
@@ -63,7 +76,7 @@ class WhatsAppOrderTest extends TestCase
         $product = Product::factory()->for($business)->create();
         $this->addToCart($business, $product);
 
-        $response = $this->post($this->url($business, 'checkout'));
+        $response = $this->checkout($business);
 
         $response->assertRedirect();
         $this->assertStringStartsWith('https://wa.me/2348012345678?', $response->headers->get('Location'));
@@ -130,31 +143,35 @@ class WhatsAppOrderTest extends TestCase
         $this->assertStringContainsString('Total: ₦60,000.00', $message);
     }
 
-    public function test_the_message_includes_customer_details_when_provided(): void
+    public function test_the_message_includes_the_customer_name_and_phone(): void
     {
         $business = $this->business();
         $product = Product::factory()->for($business)->create();
         $this->addToCart($business, $product);
 
         $message = $this->checkoutAndDecodeMessage($business, [
-            'customer_name' => 'John',
+            'customer_name' => 'John Doe',
             'customer_phone' => '08012345678',
         ]);
 
         $this->assertStringContainsString('Customer:', $message);
-        $this->assertStringContainsString('Name: John', $message);
+        $this->assertStringContainsString('Name: John Doe', $message);
         $this->assertStringContainsString('WhatsApp: 08012345678', $message);
     }
 
-    public function test_no_customer_block_when_no_details_are_provided(): void
+    public function test_the_customer_block_appears_before_the_closing_line(): void
     {
         $business = $this->business();
         $product = Product::factory()->for($business)->create();
         $this->addToCart($business, $product);
 
-        $message = $this->checkoutAndDecodeMessage($business);
+        $message = $this->checkoutAndDecodeMessage($business, ['customer_name' => 'John Doe']);
 
-        $this->assertStringNotContainsString('Customer:', $message);
+        $this->assertGreaterThan(
+            strpos($message, 'Customer:'),
+            strpos($message, 'Please confirm availability'),
+            'Expected the customer block to appear before the closing "Please confirm" line.'
+        );
     }
 
     public function test_the_message_is_correctly_url_encoded(): void
@@ -163,7 +180,7 @@ class WhatsAppOrderTest extends TestCase
         $product = Product::factory()->for($business)->create();
         $this->addToCart($business, $product);
 
-        $response = $this->post($this->url($business, 'checkout'));
+        $response = $this->checkout($business);
         $location = $response->headers->get('Location');
 
         preg_match('/\?text=([^&]+)/', $location, $matches);
@@ -177,7 +194,7 @@ class WhatsAppOrderTest extends TestCase
     {
         $business = $this->business();
 
-        $response = $this->post($this->url($business, 'checkout'));
+        $response = $this->checkout($business);
 
         $response->assertRedirect(route('cart.index', ['business' => $business->handle]));
         $this->assertDatabaseCount('orders', 0);
@@ -189,7 +206,7 @@ class WhatsAppOrderTest extends TestCase
         $product = Product::factory()->for($business)->create();
         $this->addToCart($business, $product);
 
-        $this->post($this->url($business, 'checkout'));
+        $this->checkout($business);
 
         $this->assertDatabaseCount('orders', 1);
     }
@@ -205,8 +222,8 @@ class WhatsAppOrderTest extends TestCase
         $this->addToCart($businessA, $productA);
         $this->addToCart($businessB, $productB);
 
-        $responseA = $this->post($this->url($businessA, 'checkout'));
-        $responseB = $this->post($this->url($businessB, 'checkout'));
+        $responseA = $this->checkout($businessA);
+        $responseB = $this->checkout($businessB);
 
         $this->assertStringStartsWith('https://wa.me/2348011111111?', $responseA->headers->get('Location'));
         $this->assertStringStartsWith('https://wa.me/2348022222222?', $responseB->headers->get('Location'));
@@ -218,7 +235,7 @@ class WhatsAppOrderTest extends TestCase
         $product = Product::factory()->for($business)->create();
         $this->addToCart($business, $product);
 
-        $response = $this->post($this->url($business, 'checkout'), [
+        $response = $this->checkout($business, [
             'whatsapp_number' => '19999999999',
             'business_id' => 999999,
         ]);

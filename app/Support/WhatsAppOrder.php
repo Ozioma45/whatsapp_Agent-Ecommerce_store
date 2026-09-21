@@ -56,8 +56,6 @@ class WhatsAppOrder
         }
 
         $lines[] = 'Total: ₦'.number_format((float) $order->total, 2);
-        $lines[] = '';
-        $lines[] = 'Please confirm availability and payment details.';
 
         if ($order->customer_name || $order->customer_phone) {
             $lines[] = '';
@@ -71,6 +69,9 @@ class WhatsAppOrder
                 $lines[] = "WhatsApp: {$order->customer_phone}";
             }
         }
+
+        $lines[] = '';
+        $lines[] = 'Please confirm availability and payment details.';
 
         return implode("\n", $lines);
     }

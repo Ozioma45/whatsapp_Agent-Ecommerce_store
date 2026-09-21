@@ -54,8 +54,15 @@ class CartController extends Controller
     public function checkout(Request $request, Business $business): RedirectResponse
     {
         $validated = $request->validate([
-            'customer_name' => ['nullable', 'string', 'max:255'],
-            'customer_phone' => ['nullable', 'string', 'max:30'],
+            'customer_name' => ['required', 'string', 'max:255'],
+            'customer_phone' => [
+                'required', 'string', 'max:30',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! WhatsAppOrder::normalizeNumber($value)) {
+                        $fail('Please enter a valid WhatsApp number.');
+                    }
+                },
+            ],
         ]);
 
         $cart = new Cart($business);
@@ -72,8 +79,8 @@ class CartController extends Controller
             $order = DB::transaction(function () use ($business, $items, $subtotal, $validated) {
                 $order = $business->orders()->create([
                     'order_number' => Order::generateOrderNumber(),
-                    'customer_name' => $validated['customer_name'] ?? null,
-                    'customer_phone' => $validated['customer_phone'] ?? null,
+                    'customer_name' => $validated['customer_name'],
+                    'customer_phone' => $validated['customer_phone'],
                     'status' => Order::STATUS_PENDING,
                     'subtotal' => $subtotal,
                     'total' => $subtotal,

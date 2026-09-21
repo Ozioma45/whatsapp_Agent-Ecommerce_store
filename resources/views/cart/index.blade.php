@@ -100,16 +100,25 @@
                     <form method="POST" action="{{ route('cart.checkout', ['business' => $business->handle]) }}" class="space-y-3">
                         @csrf
 
+                        <h2 class="text-sm font-medium text-gray-700">Customer information</h2>
+
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
-                                <label for="customer_name" class="block text-xs font-medium text-gray-500">Your name (optional)</label>
-                                <input id="customer_name" type="text" name="customer_name" value="{{ old('customer_name') }}"
+                                <label for="customer_name" class="block text-xs font-medium text-gray-500">Name</label>
+                                <input id="customer_name" type="text" name="customer_name" value="{{ old('customer_name') }}" required
                                     class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                                @error('customer_name')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div>
-                                <label for="customer_phone" class="block text-xs font-medium text-gray-500">Your WhatsApp number (optional)</label>
-                                <input id="customer_phone" type="text" name="customer_phone" value="{{ old('customer_phone') }}"
+                                <label for="customer_phone" class="block text-xs font-medium text-gray-500">WhatsApp number</label>
+                                <input id="customer_phone" type="text" name="customer_phone" value="{{ old('customer_phone') }}" required
+                                    placeholder="e.g. 08012345678"
                                     class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                                @error('customer_phone')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
                         </div>
 
