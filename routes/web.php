@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\FeatureController as AdminFeatureController;
+use App\Http\Controllers\Admin\PlanController as AdminPlanController;
+use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CartController;
@@ -13,8 +19,10 @@ use Illuminate\Support\Facades\Route;
 
 // Main domain: the platform itself (landing page, auth, dashboard, settings).
 Route::domain(config('app.domain'))->group(function () {
-    Route::get('/', function () {
-        return view('welcome');
+    Route::middleware('maintenance')->group(function () {
+        Route::get('/', function () {
+            return view('welcome');
+        });
     });
 
     Route::middleware('guest')->group(function () {
@@ -37,10 +45,37 @@ Route::domain(config('app.domain'))->group(function () {
 
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     });
+
+    // Platform admin: separate from the business-owner dashboard above,
+    // restricted to admins only, and always on the main domain (never a
+    // tenant subdomain — this group lives inside the same domain() as
+    // everything above, not inside the {business} subdomain group below).
+    Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/', AdminDashboardController::class)->name('dashboard');
+
+        Route::get('businesses', [AdminBusinessController::class, 'index'])->name('businesses.index');
+        Route::get('businesses/{business}', [AdminBusinessController::class, 'show'])->name('businesses.show');
+        Route::patch('businesses/{business}/plan', [AdminBusinessController::class, 'updatePlan'])->name('businesses.updatePlan');
+
+        Route::get('plans', [AdminPlanController::class, 'index'])->name('plans.index');
+        Route::get('plans/{plan}', [AdminPlanController::class, 'show'])->name('plans.show');
+        Route::patch('plans/{plan}', [AdminPlanController::class, 'update'])->name('plans.update');
+        Route::delete('plans/{plan}', [AdminPlanController::class, 'destroy'])->name('plans.destroy');
+
+        Route::get('features', [AdminFeatureController::class, 'index'])->name('features.index');
+        Route::patch('features/{feature}', [AdminFeatureController::class, 'update'])->name('features.update');
+
+        Route::get('settings', [AdminSettingController::class, 'edit'])->name('settings.edit');
+        Route::patch('settings', [AdminSettingController::class, 'update'])->name('settings.update');
+
+        Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+        Route::patch('users/{user}/role', [AdminUserController::class, 'updateRole'])->name('users.updateRole');
+    });
 });
 
 // Business subdomains: the public store, resolved by handle. {business}.{app.domain}
-Route::domain('{business}.'.config('app.domain'))->group(function () {
+Route::domain('{business}.'.config('app.domain'))->middleware('maintenance')->group(function () {
     Route::get('/', [PublicStoreController::class, 'show'])->name('store.show');
 
     Route::get('cart', [CartController::class, 'index'])->name('cart.index');

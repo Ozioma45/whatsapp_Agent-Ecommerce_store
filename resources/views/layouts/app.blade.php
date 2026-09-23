@@ -22,6 +22,9 @@
                         <a href="{{ route('products.index') }}" class="text-gray-700 hover:text-gray-900">Products</a>
                         <a href="{{ route('categories.index') }}" class="text-gray-700 hover:text-gray-900">Categories</a>
                         <a href="{{ route('settings.edit') }}" class="text-gray-700 hover:text-gray-900">Store Settings</a>
+                        @if (auth()->user()->isAdmin())
+                            <a href="{{ route('admin.dashboard') }}" class="text-gray-700 hover:text-gray-900">Admin</a>
+                        @endif
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="text-gray-700 hover:text-gray-900">Logout</button>

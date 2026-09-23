@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Plan;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,11 +43,17 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        // The platform default plan is admin-configurable (see
+        // Admin\SettingController); Standard is only the fallback if it's
+        // somehow unset. Changing this setting later never affects a
+        // business that has already been assigned a plan.
+        $defaultPlanSlug = Setting::get(Setting::DEFAULT_PLAN, Plan::STANDARD);
+
         $business = Business::create([
             'name' => $validated['business_name'],
             'handle' => Business::generateUniqueHandle($validated['business_name']),
             'owner_id' => $user->id,
-            'plan_id' => Plan::where('slug', Plan::STANDARD)->first()?->id,
+            'plan_id' => Plan::where('slug', $defaultPlanSlug)->first()?->id,
         ]);
 
         $business->setting()->create([]);
