@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PlanFeatureService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'handle', 'owner_id'])]
+#[Fillable(['name', 'handle', 'owner_id', 'plan_id'])]
 class Business extends Model
 {
     use HasFactory;
@@ -63,6 +64,44 @@ class Business extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * The business's current SaaS plan.
+     */
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
+    /**
+     * Whether this business's plan has the given boolean feature enabled.
+     *
+     * A thin, ergonomic wrapper — the actual entitlement logic lives
+     * centrally in PlanFeatureService, never duplicated at call sites.
+     */
+    public function hasFeature(string $key): bool
+    {
+        return app(PlanFeatureService::class)->hasFeature($this, $key);
+    }
+
+    /**
+     * The numeric limit for a limit-type feature on this business's plan,
+     * or null when the feature is unlimited (or not entitled at all).
+     */
+    public function featureLimit(string $key): ?int
+    {
+        return app(PlanFeatureService::class)->getLimit($this, $key);
+    }
+
+    /**
+     * Whether a given usage count is still within this business's plan
+     * limit for the given feature (always true when the limit is null,
+     * i.e. unlimited).
+     */
+    public function withinFeatureLimit(string $key, int $currentCount): bool
+    {
+        return app(PlanFeatureService::class)->withinLimit($this, $key, $currentCount);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,7 @@ class RegisteredUserController extends Controller
             'name' => $validated['business_name'],
             'handle' => Business::generateUniqueHandle($validated['business_name']),
             'owner_id' => $user->id,
+            'plan_id' => Plan::where('slug', Plan::STANDARD)->first()?->id,
         ]);
 
         $business->setting()->create([]);

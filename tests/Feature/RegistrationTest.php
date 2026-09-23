@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Business;
+use App\Models\Plan;
 use App\Models\User;
+use Database\Seeders\PlanSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -123,13 +126,31 @@ class RegistrationTest extends TestCase
 
     public function test_handles_are_unique_at_the_database_level(): void
     {
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         $owner1 = User::factory()->create();
         Business::create(['name' => 'One', 'handle' => 'duplicate-handle', 'owner_id' => $owner1->id]);
 
         $owner2 = User::factory()->create();
         Business::create(['name' => 'Two', 'handle' => 'duplicate-handle', 'owner_id' => $owner2->id]);
+    }
+
+    public function test_a_new_business_is_automatically_assigned_the_standard_plan(): void
+    {
+        $this->seed(PlanSeeder::class);
+
+        $this->post('/register', [
+            'business_name' => "Mike's Fashion",
+            'name' => 'Mike Owner',
+            'email' => 'mike@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
+
+        $business = Business::where('name', "Mike's Fashion")->firstOrFail();
+
+        $this->assertNotNull($business->plan);
+        $this->assertSame(Plan::STANDARD, $business->plan->slug);
     }
 
     public function test_reserved_handles_cannot_be_assigned_to_a_business(): void
