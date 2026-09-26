@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStoreController;
+use App\Http\Controllers\Settings\AiAssistantSettingsController;
 use App\Http\Controllers\Settings\StoreSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,9 @@ Route::domain(config('app.domain'))->group(function () {
 
         Route::get('settings', [StoreSettingsController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [StoreSettingsController::class, 'update'])->name('settings.update');
+
+        Route::get('ai-assistant', [AiAssistantSettingsController::class, 'edit'])->name('ai.edit');
+        Route::put('ai-assistant', [AiAssistantSettingsController::class, 'update'])->name('ai.update');
 
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('products', ProductController::class)->except('show');

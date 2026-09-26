@@ -67,6 +67,26 @@ class Business extends Model
     }
 
     /**
+     * Every business gets its own AI assistant settings row the moment it
+     * is created — disabled by default, so AI is never switched on for a
+     * business that hasn't chosen it.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (Business $business) {
+            $business->aiAssistantSettings()->create(AiAssistantSetting::defaults());
+        });
+    }
+
+    /**
+     * This business's AI assistant configuration (one per business).
+     */
+    public function aiAssistantSettings(): HasOne
+    {
+        return $this->hasOne(AiAssistantSetting::class);
+    }
+
+    /**
      * The business's current SaaS plan.
      */
     public function plan(): BelongsTo

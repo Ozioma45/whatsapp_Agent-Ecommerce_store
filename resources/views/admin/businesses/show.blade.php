@@ -72,6 +72,20 @@
             </div>
 
             <div class="rounded-lg border border-gray-200 bg-white p-6">
+                <h2 class="mb-4 text-sm font-medium text-gray-500">AI Assistant</h2>
+                <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt class="text-gray-500">Plan eligible</dt>
+                        <dd class="text-gray-900">{{ $business->hasFeature(\App\Models\Feature::AI_ASSISTANT) ? 'Yes' : 'No' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Enabled</dt>
+                        <dd class="text-gray-900">{{ $business->aiAssistantSettings?->enabled ? 'Yes' : 'No' }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-6">
                 <h2 class="mb-4 text-sm font-medium text-gray-500">Statistics</h2>
                 <dl class="grid grid-cols-3 gap-3 text-sm">
                     <div>

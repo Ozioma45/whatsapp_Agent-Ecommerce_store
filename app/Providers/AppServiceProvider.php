@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Support\Ai\AiProviderInterface;
+use App\Support\Ai\NullAiProvider;
 use App\Support\Cart;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -14,7 +16,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // No real AI provider exists yet; a concrete one replaces this
+        // binding in a later phase.
+        $this->app->bind(AiProviderInterface::class, NullAiProvider::class);
     }
 
     /**

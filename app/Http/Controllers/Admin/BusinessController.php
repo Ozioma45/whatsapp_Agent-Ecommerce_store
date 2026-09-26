@@ -46,7 +46,7 @@ class BusinessController extends Controller
      */
     public function show(string $business): View
     {
-        $business = Business::with(['owner', 'setting', 'plan'])->where('handle', $business)->firstOrFail();
+        $business = Business::with(['owner', 'setting', 'plan', 'aiAssistantSettings'])->where('handle', $business)->firstOrFail();
 
         return view('admin.businesses.show', [
             'business' => $business,
