@@ -16,10 +16,18 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStoreController;
 use App\Http\Controllers\Settings\AiAssistantSettingsController;
 use App\Http\Controllers\Settings\StoreSettingsController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // Main domain: the platform itself (landing page, auth, dashboard, settings).
 Route::domain(config('app.domain'))->group(function () {
+    // The WhatsApp webhook is a single, platform-wide endpoint (Meta allows
+    // one callback URL per app). It deliberately sits outside both the
+    // "maintenance" and "auth" groups: Meta must always be able to reach
+    // it, and it authenticates itself via request signature, not a session.
+    Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('webhooks.whatsapp.verify');
+    Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle'])->name('webhooks.whatsapp.handle');
+
     Route::middleware('maintenance')->group(function () {
         Route::get('/', function () {
             return view('welcome');

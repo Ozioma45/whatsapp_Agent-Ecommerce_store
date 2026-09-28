@@ -18,6 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
             'maintenance' => CheckMaintenanceMode::class,
         ]);
+
+        // Meta calls this endpoint directly with no session/CSRF token of
+        // any kind; it is authenticated instead by its own request
+        // signature (see WhatsAppWebhookProcessor). This is a targeted
+        // exception for that one path, not a global CSRF opt-out.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/whatsapp',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

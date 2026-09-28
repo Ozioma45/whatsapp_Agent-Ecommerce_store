@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | WhatsApp Business Platform (Meta)
+    |--------------------------------------------------------------------------
+    |
+    | These are platform-level (one Meta App for the whole SaaS), not
+    | per-business — per-business credentials live in the
+    | whatsapp_integration_settings table instead. The app secret verifies
+    | inbound webhook signatures; the verify token answers Meta's one-time
+    | webhook verification challenge.
+    |
+    */
+
+    'whatsapp' => [
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+        'api_version' => env('WHATSAPP_API_VERSION', 'v20.0'),
+    ],
+
 ];

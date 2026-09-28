@@ -87,6 +87,16 @@ class Business extends Model
     }
 
     /**
+     * This business's WhatsApp Business Platform connection (one per
+     * business). Unlike AI settings, this is not auto-created — there is
+     * nothing meaningful to default it to until the business connects.
+     */
+    public function whatsAppIntegrationSetting(): HasOne
+    {
+        return $this->hasOne(WhatsAppIntegrationSetting::class);
+    }
+
+    /**
      * The business's current SaaS plan.
      */
     public function plan(): BelongsTo
