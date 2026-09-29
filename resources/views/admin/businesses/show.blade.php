@@ -86,6 +86,36 @@
             </div>
 
             <div class="rounded-lg border border-gray-200 bg-white p-6">
+                <h2 class="mb-4 text-sm font-medium text-gray-500">Subscription history</h2>
+                @if ($subscriptionHistory->isEmpty())
+                    <p class="text-sm text-gray-500">No subscription records.</p>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="text-left text-gray-500">
+                                <tr>
+                                    <th class="py-2 pr-4 font-medium">Plan</th>
+                                    <th class="py-2 pr-4 font-medium">Status</th>
+                                    <th class="py-2 pr-4 font-medium">Start</th>
+                                    <th class="py-2 font-medium">Expiry</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach ($subscriptionHistory as $record)
+                                    <tr class="{{ $business->current_subscription_id === $record->id ? 'font-medium text-gray-900' : 'text-gray-500' }}">
+                                        <td class="py-2 pr-4">{{ $record->plan?->name ?? 'Unknown plan' }}</td>
+                                        <td class="py-2 pr-4">{{ $record->statusLabel() }}</td>
+                                        <td class="py-2 pr-4">{{ $record->starts_at?->format('d M Y') ?? '—' }}</td>
+                                        <td class="py-2">{{ $record->expires_at?->format('d M Y') ?? '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-6">
                 <h2 class="mb-4 text-sm font-medium text-gray-500">Statistics</h2>
                 <dl class="grid grid-cols-3 gap-3 text-sm">
                     <div>
@@ -104,7 +134,40 @@
             </div>
         </div>
 
-        <div>
+        <div class="space-y-6">
+            <div class="rounded-lg border border-gray-200 bg-white p-6">
+                <h2 class="mb-4 text-sm font-medium text-gray-500">Subscription status</h2>
+                <dl class="grid grid-cols-1 gap-3 text-sm">
+                    <div>
+                        <dt class="text-gray-500">Status</dt>
+                        <dd class="text-gray-900">{{ $business->currentSubscription?->statusLabel() ?? 'Active' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Expiry</dt>
+                        <dd class="text-gray-900">{{ $business->currentSubscription?->expires_at?->format('d M Y') ?? 'Does not expire' }}</dd>
+                    </div>
+                </dl>
+
+                @if ($business->currentSubscription)
+                    <div class="mt-4 flex gap-2">
+                        @if ($business->currentSubscription->status === \App\Models\Subscription::STATUS_SUSPENDED)
+                            <form method="POST" action="{{ route('admin.businesses.subscription.reactivate', $business) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="rounded-md bg-gray-900 px-3 py-1.5 text-xs text-white hover:bg-gray-700">Reactivate</button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('admin.businesses.subscription.suspend', $business) }}"
+                                onsubmit="return confirm('Suspend this business\'s subscription? It will immediately lose its plan features.');">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">Suspend</button>
+                            </form>
+                        @endif
+                    </div>
+                @endif
+            </div>
+
             <div class="rounded-lg border border-gray-200 bg-white p-6">
                 <h2 class="mb-4 text-sm font-medium text-gray-500">Change plan</h2>
                 <form method="POST" action="{{ route('admin.businesses.updatePlan', $business) }}" class="space-y-3">
@@ -119,6 +182,22 @@
                     @error('plan_id')
                         <p class="text-sm text-red-600">{{ $message }}</p>
                     @enderror
+
+                    <div>
+                        <label class="block text-xs text-gray-500">Start date (optional)</label>
+                        <input type="date" name="starts_at" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                        @error('starts_at')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-500">Expiry date (optional)</label>
+                        <input type="date" name="expires_at" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                        @error('expires_at')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
 
                     <button type="submit" class="w-full rounded-md bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700">
                         Save plan

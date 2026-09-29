@@ -24,10 +24,13 @@ class PlanSeeder extends Seeder
      */
     public function run(): void
     {
+        // Prices are illustrative placeholders for the subscription pages
+        // to display — like the entitlements above, not final commercial
+        // pricing, and no payment gateway reads them (Phase 10A).
         $plans = [
-            Plan::STANDARD => ['name' => 'Standard', 'description' => 'The default plan every new business starts on.'],
-            Plan::PRO => ['name' => 'Pro', 'description' => 'Adds custom branding and higher limits.'],
-            Plan::PREMIUM => ['name' => 'Premium', 'description' => 'Everything, including the AI assistant, unlimited.'],
+            Plan::STANDARD => ['name' => 'Standard', 'description' => 'The default plan every new business starts on.', 'price' => 0],
+            Plan::PRO => ['name' => 'Pro', 'description' => 'Adds custom branding and higher limits.', 'price' => 15000],
+            Plan::PREMIUM => ['name' => 'Premium', 'description' => 'Everything, including the AI assistant, unlimited.', 'price' => 45000],
         ];
 
         $planModels = [];

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Plan;
+use App\Support\SubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -46,7 +47,8 @@ class BusinessController extends Controller
      */
     public function show(string $business): View
     {
-        $business = Business::with(['owner', 'setting', 'plan', 'aiAssistantSettings'])->where('handle', $business)->firstOrFail();
+        $business = Business::with(['owner', 'setting', 'plan', 'aiAssistantSettings', 'currentSubscription'])
+            ->where('handle', $business)->firstOrFail();
 
         return view('admin.businesses.show', [
             'business' => $business,
@@ -54,28 +56,73 @@ class BusinessController extends Controller
             'productCount' => $business->products()->count(),
             'categoryCount' => $business->categories()->count(),
             'orderCount' => $business->orders()->count(),
+            'subscriptionHistory' => $business->subscriptions()->with('plan')->latest()->get(),
         ]);
     }
 
     /**
-     * Manually assign a business to a different plan.
+     * Manually assign a business to a different plan, optionally with
+     * explicit start/expiry dates — recorded as a proper subscription
+     * episode (see SubscriptionService::assignPlanDirectly()).
      *
      * Only an existing, active plan id can ever be assigned — never an
      * arbitrary id supplied by the form. No billing is involved; this is
-     * a direct admin override (see Phase 8's PlanFeatureService, which
-     * every entitlement check reads from automatically once the plan_id
-     * changes).
+     * a direct admin override.
      */
-    public function updatePlan(Request $request, string $business): RedirectResponse
+    public function updatePlan(Request $request, string $business, SubscriptionService $service): RedirectResponse
     {
         $business = Business::where('handle', $business)->firstOrFail();
 
         $validated = $request->validate([
             'plan_id' => ['required', Rule::exists('plans', 'id')->where('is_active', true)],
+            'starts_at' => ['nullable', 'date'],
+            'expires_at' => ['nullable', 'date', 'after:starts_at'],
+            'billing_period' => ['nullable', Rule::in(['monthly', 'yearly'])],
         ]);
 
-        $business->update(['plan_id' => $validated['plan_id']]);
+        $service->assignPlanDirectly(
+            $business,
+            Plan::findOrFail($validated['plan_id']),
+            $request->user(),
+            $validated['starts_at'] ?? null,
+            $validated['expires_at'] ?? null,
+            $validated['billing_period'] ?? null,
+        );
 
         return redirect()->route('admin.businesses.show', $business)->with('status', 'Plan updated.');
+    }
+
+    /**
+     * Suspend a business's current subscription — it immediately loses its
+     * plan's entitlements (see Business::hasActiveSubscriptionStanding())
+     * until reactivated.
+     */
+    public function suspendSubscription(Request $request, string $business, SubscriptionService $service): RedirectResponse
+    {
+        $business = Business::where('handle', $business)->firstOrFail();
+
+        if (! $business->currentSubscription) {
+            return back()->with('error', 'This business has no subscription to suspend.');
+        }
+
+        $service->suspend($business->currentSubscription, $request->user());
+
+        return redirect()->route('admin.businesses.show', $business)->with('status', 'Subscription suspended.');
+    }
+
+    /**
+     * Reactivate a business's current subscription.
+     */
+    public function reactivateSubscription(Request $request, string $business, SubscriptionService $service): RedirectResponse
+    {
+        $business = Business::where('handle', $business)->firstOrFail();
+
+        if (! $business->currentSubscription) {
+            return back()->with('error', 'This business has no subscription to reactivate.');
+        }
+
+        $service->reactivate($business->currentSubscription, $request->user());
+
+        return redirect()->route('admin.businesses.show', $business)->with('status', 'Subscription reactivated.');
     }
 }

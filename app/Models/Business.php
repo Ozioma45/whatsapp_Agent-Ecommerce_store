@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'handle', 'owner_id', 'plan_id'])]
+#[Fillable(['name', 'handle', 'owner_id', 'plan_id', 'current_subscription_id'])]
 class Business extends Model
 {
     use HasFactory;
@@ -69,12 +69,23 @@ class Business extends Model
     /**
      * Every business gets its own AI assistant settings row the moment it
      * is created — disabled by default, so AI is never switched on for a
-     * business that hasn't chosen it.
+     * business that hasn't chosen it — and its own initial, active
+     * subscription mirroring whatever plan it was created with, so every
+     * business always has a subscription record from day one (see
+     * hasActiveSubscriptionStanding() for why that matters).
      */
     protected static function booted(): void
     {
         static::created(function (Business $business) {
             $business->aiAssistantSettings()->create(AiAssistantSetting::defaults());
+
+            $subscription = $business->subscriptions()->create([
+                'plan_id' => $business->plan_id,
+                'status' => Subscription::STATUS_ACTIVE,
+                'starts_at' => now()->toDateString(),
+            ]);
+
+            $business->update(['current_subscription_id' => $subscription->id]);
         });
     }
 
@@ -113,33 +124,81 @@ class Business extends Model
     }
 
     /**
+     * This business's full subscription history (Phase 10A) — every plan
+     * change and admin decision, oldest first. Never deleted, only ever
+     * superseded (see Subscription).
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /**
+     * The one subscription currently governing this business's
+     * entitlements — never simply "the latest row" (a pending request
+     * doesn't change this). Null only for data that predates Phase 10A and
+     * somehow missed the backfill migration.
+     */
+    public function currentSubscription(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class, 'current_subscription_id');
+    }
+
+    /**
+     * Whether this business's subscription standing allows it to use its
+     * plan's entitlements at all — independent of what the plan itself
+     * grants (see PlanFeatureService for that). A business with no
+     * subscription record at all is treated as being in good standing:
+     * this is a defensive fallback for data that predates Phase 10A, kept
+     * so nothing already relying on plan_id alone silently breaks. In
+     * practice every business has a subscription from the moment it's
+     * created (see booted()) or from the Phase 10A backfill migration, so
+     * this fallback should never actually be exercised.
+     */
+    public function hasActiveSubscriptionStanding(): bool
+    {
+        return ! $this->currentSubscription || $this->currentSubscription->isInGoodStanding();
+    }
+
+    /**
      * Whether this business's plan has the given boolean feature enabled.
      *
-     * A thin, ergonomic wrapper — the actual entitlement logic lives
-     * centrally in PlanFeatureService, never duplicated at call sites.
+     * A thin, ergonomic wrapper — the actual plan/feature entitlement
+     * logic lives centrally in PlanFeatureService, never duplicated at
+     * call sites. Subscription standing is checked here, once, rather
+     * than inside PlanFeatureService, so that service stays exactly what
+     * it always was: the single reader of plan_features pivot data.
      */
     public function hasFeature(string $key): bool
     {
-        return app(PlanFeatureService::class)->hasFeature($this, $key);
+        return $this->hasActiveSubscriptionStanding()
+            && app(PlanFeatureService::class)->hasFeature($this, $key);
     }
 
     /**
      * The numeric limit for a limit-type feature on this business's plan,
-     * or null when the feature is unlimited (or not entitled at all).
+     * or null when the feature is unlimited, not entitled, or the
+     * business's subscription isn't currently in good standing.
      */
     public function featureLimit(string $key): ?int
     {
+        if (! $this->hasActiveSubscriptionStanding()) {
+            return null;
+        }
+
         return app(PlanFeatureService::class)->getLimit($this, $key);
     }
 
     /**
      * Whether a given usage count is still within this business's plan
      * limit for the given feature (always true when the limit is null,
-     * i.e. unlimited).
+     * i.e. unlimited) — and always false when its subscription isn't
+     * currently in good standing.
      */
     public function withinFeatureLimit(string $key, int $currentCount): bool
     {
-        return app(PlanFeatureService::class)->withinLimit($this, $key, $currentCount);
+        return $this->hasActiveSubscriptionStanding()
+            && app(PlanFeatureService::class)->withinLimit($this, $key, $currentCount);
     }
 
     /**

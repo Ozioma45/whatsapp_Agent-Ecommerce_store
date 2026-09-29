@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FeatureController as AdminFeatureController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStoreController;
 use App\Http\Controllers\Settings\AiAssistantSettingsController;
 use App\Http\Controllers\Settings\StoreSettingsController;
+use App\Http\Controllers\Settings\SubscriptionController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +50,9 @@ Route::domain(config('app.domain'))->group(function () {
         Route::get('settings', [StoreSettingsController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [StoreSettingsController::class, 'update'])->name('settings.update');
 
+        Route::get('subscription', [SubscriptionController::class, 'edit'])->name('subscription.edit');
+        Route::post('subscription/request', [SubscriptionController::class, 'requestChange'])->name('subscription.request');
+
         Route::get('ai-assistant', [AiAssistantSettingsController::class, 'edit'])->name('ai.edit');
         Route::put('ai-assistant', [AiAssistantSettingsController::class, 'update'])->name('ai.update');
         Route::post('ai-assistant/simulate', [AiAssistantSettingsController::class, 'simulate'])->name('ai.simulate');
@@ -70,6 +75,12 @@ Route::domain(config('app.domain'))->group(function () {
         Route::get('businesses', [AdminBusinessController::class, 'index'])->name('businesses.index');
         Route::get('businesses/{business}', [AdminBusinessController::class, 'show'])->name('businesses.show');
         Route::patch('businesses/{business}/plan', [AdminBusinessController::class, 'updatePlan'])->name('businesses.updatePlan');
+        Route::patch('businesses/{business}/subscription/suspend', [AdminBusinessController::class, 'suspendSubscription'])->name('businesses.subscription.suspend');
+        Route::patch('businesses/{business}/subscription/reactivate', [AdminBusinessController::class, 'reactivateSubscription'])->name('businesses.subscription.reactivate');
+
+        Route::get('subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::patch('subscriptions/{subscription}/approve', [AdminSubscriptionController::class, 'approve'])->name('subscriptions.approve');
+        Route::patch('subscriptions/{subscription}/reject', [AdminSubscriptionController::class, 'reject'])->name('subscriptions.reject');
 
         Route::get('plans', [AdminPlanController::class, 'index'])->name('plans.index');
         Route::get('plans/{plan}', [AdminPlanController::class, 'show'])->name('plans.show');
