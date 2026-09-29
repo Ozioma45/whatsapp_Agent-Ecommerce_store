@@ -116,7 +116,7 @@ class AiOrderSecurityTest extends TestCase
         $b = $this->readyBusiness();
         Product::factory()->create(['business_id' => $b->id, 'name' => 'B Item', 'price' => 10]);
 
-        $this->send($b, 'B Item', id: 'wamid.b1');
+        $this->send($b, 'I want B Item', id: 'wamid.b1');
         $bDraft = $b->whatsAppConversations()->firstOrFail()->orderDraft;
         $this->assertNotNull($bDraft);
 
@@ -133,7 +133,7 @@ class AiOrderSecurityTest extends TestCase
         $other = Business::factory()->create();
         Product::factory()->create(['business_id' => $real->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $payload = $this->textMessagePayload($real->whatsAppIntegrationSetting->phone_number_id, 'wamid.spoof', 'Blue Sneaker');
+        $payload = $this->textMessagePayload($real->whatsAppIntegrationSetting->phone_number_id, 'wamid.spoof', 'I want the Blue Sneaker');
         $payload['entry'][0]['changes'][0]['value']['business_id'] = $other->id;
 
         $this->postSignedWebhook($payload)->assertOk();
@@ -157,7 +157,7 @@ class AiOrderSecurityTest extends TestCase
             }
         });
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
         $this->send($business, 'confirm', id: 'wamid.4');
@@ -209,7 +209,7 @@ class AiOrderSecurityTest extends TestCase
         $business->whatsAppIntegrationSetting->update(['access_token' => 'do-not-leak-order-token']);
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
         $outcome = $this->send($business, 'confirm', id: 'wamid.4');

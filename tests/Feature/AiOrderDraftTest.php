@@ -108,12 +108,12 @@ class AiOrderDraftTest extends TestCase
         $business = $this->readyBusiness();
         $product = Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, '3 Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want 3 Blue Sneaker', id: 'wamid.1');
 
         $draft = $business->whatsAppConversations()->firstOrFail()->orderDraft;
         $this->assertSame(3, $draft->items()->where('product_id', $product->id)->value('quantity'));
 
-        $this->send($business, '5 Blue Sneaker', id: 'wamid.2');
+        $this->send($business, 'I want 5 Blue Sneaker', id: 'wamid.2');
         $this->assertSame(5, $draft->fresh()->items()->where('product_id', $product->id)->value('quantity'));
     }
 
@@ -122,7 +122,7 @@ class AiOrderDraftTest extends TestCase
         $business = $this->readyBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $reply = $this->send($business, 'Remove the Blue Sneaker', id: 'wamid.2');
 
         $this->assertStringContainsString('Removed', $reply);
@@ -135,7 +135,7 @@ class AiOrderDraftTest extends TestCase
         $business = $this->readyBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $reply = $this->send($business, 'clear', id: 'wamid.2');
 
         $this->assertStringContainsString('cleared', $reply);
@@ -172,7 +172,7 @@ class AiOrderDraftTest extends TestCase
         $business = $this->readyBusiness();
         $product = Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $product->delete();
 
         $reply = $this->send($business, 'checkout', id: 'wamid.2');
@@ -188,13 +188,13 @@ class AiOrderDraftTest extends TestCase
         $business = $this->readyBusiness();
         $product = Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $product->update(['price' => 35]);
 
         // Any draft-changing message re-renders the summary from current
         // DB prices; mentioning the same product again (no name collected
         // yet) is enough to prove the price shown is always fresh.
-        $reply = $this->send($business, 'Blue Sneaker', id: 'wamid.2');
+        $reply = $this->send($business, 'I want the Blue Sneaker', id: 'wamid.2');
 
         $this->assertStringContainsString('35.00', $reply);
         $this->assertStringNotContainsString('20.00', $reply);

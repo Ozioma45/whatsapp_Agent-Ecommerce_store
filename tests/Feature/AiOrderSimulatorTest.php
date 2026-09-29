@@ -54,11 +54,11 @@ class AiOrderSimulatorTest extends TestCase
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Red Cap', 'price' => 5]);
 
-        $this->simulate($business, '2 Blue Sneaker')
+        $this->simulate($business, 'I want 2 Blue Sneaker')
             ->assertSee('Blue Sneaker')
             ->assertSee('Current simulated draft', false);
 
-        $this->simulate($business, 'Red Cap')->assertSee('Red Cap');
+        $this->simulate($business, 'Add Red Cap')->assertSee('Red Cap');
 
         $this->simulate($business, 'checkout')->assertSee('name', false);
         $this->simulate($business, 'Jane Simulated')->assertSee('CONFIRM');
@@ -78,7 +78,7 @@ class AiOrderSimulatorTest extends TestCase
         $business = $this->eligibleBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->simulate($business, 'Blue Sneaker');
+        $this->simulate($business, 'I want the Blue Sneaker');
         $response = $this->simulate($business, 'cancel');
 
         $response->assertSee('cancelled');
@@ -102,7 +102,7 @@ class AiOrderSimulatorTest extends TestCase
         $business = $this->eligibleBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->simulate($business, 'Blue Sneaker');
+        $this->simulate($business, 'I want the Blue Sneaker');
         $this->actingAs($business->owner)->post('/ai-assistant/simulate/reset')->assertRedirect('/ai-assistant');
 
         $response = $this->simulate($business, 'checkout');
@@ -124,7 +124,7 @@ class AiOrderSimulatorTest extends TestCase
         Product::factory()->create(['business_id' => $a->id, 'name' => 'A Product', 'price' => 10]);
         Product::factory()->create(['business_id' => $b->id, 'name' => 'B Product', 'price' => 10]);
 
-        $this->simulate($a, 'A Product');
+        $this->simulate($a, 'I want A Product');
 
         $response = $this->simulate($b, 'checkout');
         $response->assertSee('anything available yet');

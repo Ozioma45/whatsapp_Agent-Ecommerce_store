@@ -68,7 +68,7 @@ class AiOrderConfirmationTest extends TestCase
         $business = $this->readyBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
 
@@ -80,7 +80,7 @@ class AiOrderConfirmationTest extends TestCase
         $business = $this->readyBusiness();
         $product = Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, '2 Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want 2 Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3'); // provides name, shows summary
         $outcome = $this->send($business, 'confirm', id: 'wamid.4');
@@ -114,7 +114,7 @@ class AiOrderConfirmationTest extends TestCase
             }
         });
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
         $this->send($business, 'okay', id: 'wamid.4');
@@ -131,7 +131,7 @@ class AiOrderConfirmationTest extends TestCase
         $business = $this->readyBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
         $outcome = $this->send($business, 'cancel', id: 'wamid.4');
@@ -146,7 +146,7 @@ class AiOrderConfirmationTest extends TestCase
         $business = $this->readyBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $checkoutOutcome = $this->send($business, 'checkout', id: 'wamid.2');
 
         $this->assertStringContainsString('name', strtolower($checkoutOutcome->replyText));
@@ -168,7 +168,7 @@ class AiOrderConfirmationTest extends TestCase
         $business = $this->readyBusiness();
         $product = Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
 
@@ -191,7 +191,7 @@ class AiOrderConfirmationTest extends TestCase
         $business = $this->readyBusiness();
         Product::factory()->create(['business_id' => $business->id, 'name' => 'Blue Sneaker', 'price' => 20]);
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
 
@@ -220,7 +220,7 @@ class AiOrderConfirmationTest extends TestCase
             };
         });
 
-        $this->send($business, 'Blue Sneaker', id: 'wamid.1');
+        $this->send($business, 'I want the Blue Sneaker', id: 'wamid.1');
         $this->send($business, 'checkout', id: 'wamid.2');
         $this->send($business, 'Jane Doe', id: 'wamid.3');
         $outcome = $this->send($business, 'confirm', id: 'wamid.4');
