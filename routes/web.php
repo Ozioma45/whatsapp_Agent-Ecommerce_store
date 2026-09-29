@@ -50,6 +50,8 @@ Route::domain(config('app.domain'))->group(function () {
 
         Route::get('ai-assistant', [AiAssistantSettingsController::class, 'edit'])->name('ai.edit');
         Route::put('ai-assistant', [AiAssistantSettingsController::class, 'update'])->name('ai.update');
+        Route::post('ai-assistant/simulate', [AiAssistantSettingsController::class, 'simulate'])->name('ai.simulate');
+        Route::post('ai-assistant/simulate/reset', [AiAssistantSettingsController::class, 'resetSimulation'])->name('ai.simulate.reset');
 
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('products', ProductController::class)->except('show');

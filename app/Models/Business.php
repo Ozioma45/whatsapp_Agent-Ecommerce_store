@@ -97,6 +97,14 @@ class Business extends Model
     }
 
     /**
+     * This business's WhatsApp conversations, one per customer number.
+     */
+    public function whatsAppConversations(): HasMany
+    {
+        return $this->hasMany(WhatsAppConversation::class);
+    }
+
+    /**
      * The business's current SaaS plan.
      */
     public function plan(): BelongsTo

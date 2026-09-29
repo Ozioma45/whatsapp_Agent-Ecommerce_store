@@ -29,9 +29,13 @@ class AiAssistantService
     }
 
     /**
-     * Build the context for exactly one business.
+     * Build the context for exactly one business, optionally carrying the
+     * recent history of one conversation (already scoped to that business
+     * and that customer by the caller — see ConversationEngine).
+     *
+     * @param  array<int, array{role: string, text: string}>  $conversationHistory
      */
-    public function buildContext(Business $business): AiContext
+    public function buildContext(Business $business, array $conversationHistory = []): AiContext
     {
         $catalog = new ProductCatalogService($business);
         $settings = $business->aiAssistantSettings;
@@ -45,6 +49,7 @@ class AiAssistantService
             tone: $settings?->tone ?? AiAssistantSetting::TONE_FRIENDLY,
             welcomeMessage: $settings?->welcome_message,
             businessInstructions: $settings?->business_instructions,
+            conversationHistory: $conversationHistory,
         );
     }
 

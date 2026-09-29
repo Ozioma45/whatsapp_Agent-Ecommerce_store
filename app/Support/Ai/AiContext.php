@@ -29,6 +29,7 @@ final readonly class AiContext
     /**
      * @param  array<int, string>  $categories
      * @param  array<int, array{name: string, description: ?string, price: string, available: bool, category: ?string}>  $products
+     * @param  array<int, array{role: string, text: string}>  $conversationHistory
      */
     public function __construct(
         public string $businessName,
@@ -39,6 +40,7 @@ final readonly class AiContext
         public ?string $tone = null,
         public ?string $welcomeMessage = null,
         public ?string $businessInstructions = null,
+        public array $conversationHistory = [],
     ) {}
 
     /**
@@ -64,6 +66,9 @@ final readonly class AiContext
                 'categories' => $this->categories,
                 'products' => $this->products,
             ],
+            // The immediately preceding turns of this one conversation only
+            // — never another customer's, and never another business's.
+            'conversation_history' => $this->conversationHistory,
         ];
     }
 }

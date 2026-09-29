@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\AiAssistantSetting;
 use App\Models\Feature;
+use App\Support\Ai\ConversationEngine;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -55,5 +56,50 @@ class AiAssistantSettingsController extends Controller
         ]);
 
         return redirect()->route('ai.edit')->with('status', 'AI Assistant settings updated.');
+    }
+
+    /**
+     * Run one conversation-simulator turn for the authenticated user's own
+     * business. This never sends a real WhatsApp message, never touches
+     * real conversation history, and never uses a real (or paid) AI
+     * provider — see ConversationEngine::simulate().
+     */
+    public function simulate(Request $request, ConversationEngine $engine): RedirectResponse
+    {
+        $business = $request->user()->business()->firstOrFail();
+
+        abort_unless($business->hasFeature(Feature::AI_ASSISTANT), 403, 'The AI Assistant is not available on your plan.');
+
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $result = $engine->simulate($business, $validated['message']);
+
+        return redirect()->route('ai.edit')->with('simulation', [
+            'successful' => $result->successful,
+            'status' => $result->status,
+            'customer_message' => $result->customerMessage,
+            'reply' => $result->reply,
+            'products' => $result->productsUsed,
+            'draft' => $result->draft,
+            'simulated_order_created' => $result->simulatedOrderCreated,
+        ]);
+    }
+
+    /**
+     * Discard the simulated conversation's order draft, so testing can
+     * start over from a clean state. This never touches a real
+     * WhatsAppConversation, WhatsAppOrderDraft, or Order.
+     */
+    public function resetSimulation(Request $request, ConversationEngine $engine): RedirectResponse
+    {
+        $business = $request->user()->business()->firstOrFail();
+
+        abort_unless($business->hasFeature(Feature::AI_ASSISTANT), 403, 'The AI Assistant is not available on your plan.');
+
+        $engine->resetSimulation($business);
+
+        return redirect()->route('ai.edit')->with('status', 'Simulation reset.');
     }
 }

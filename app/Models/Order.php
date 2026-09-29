@@ -8,10 +8,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['business_id', 'order_number', 'customer_name', 'customer_phone', 'status', 'subtotal', 'total'])]
+#[Fillable(['business_id', 'order_number', 'customer_name', 'customer_phone', 'status', 'subtotal', 'total', 'source'])]
 class Order extends Model
 {
     use HasFactory;
+
+    /**
+     * A customer checked out through the public storefront cart.
+     */
+    public const SOURCE_STOREFRONT = 'storefront';
+
+    /**
+     * A customer placed this order through the WhatsApp AI assistant.
+     */
+    public const SOURCE_WHATSAPP_AI = 'whatsapp_ai';
 
     public const STATUS_PENDING = 'pending';
 

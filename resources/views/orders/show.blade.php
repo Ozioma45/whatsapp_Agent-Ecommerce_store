@@ -5,7 +5,12 @@
 @section('content')
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold">Order {{ $order->order_number }}</h1>
-        @include('orders._status-badge', ['status' => $order->status])
+        <div class="flex items-center gap-2">
+            @if ($order->source === \App\Models\Order::SOURCE_WHATSAPP_AI)
+                <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">WhatsApp AI</span>
+            @endif
+            @include('orders._status-badge', ['status' => $order->status])
+        </div>
     </div>
 
     @if (session('status'))
@@ -62,6 +67,10 @@
                     <div>
                         <dt class="text-gray-500">Customer phone</dt>
                         <dd class="text-gray-900">{{ $order->customer_phone ?: 'Not provided' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Source</dt>
+                        <dd class="text-gray-900">{{ $order->source === \App\Models\Order::SOURCE_WHATSAPP_AI ? 'WhatsApp AI assistant' : 'Storefront' }}</dd>
                     </div>
                 </dl>
             </div>

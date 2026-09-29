@@ -28,6 +28,16 @@ class OrderFactory extends Factory
             'status' => Order::STATUS_PENDING,
             'subtotal' => $subtotal,
             'total' => $subtotal,
+            'source' => Order::SOURCE_STOREFRONT,
         ];
+    }
+
+    /**
+     * An order placed through the WhatsApp AI assistant rather than the
+     * storefront cart.
+     */
+    public function whatsappAi(): static
+    {
+        return $this->state(fn () => ['source' => Order::SOURCE_WHATSAPP_AI]);
     }
 }

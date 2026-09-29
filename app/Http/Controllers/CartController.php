@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Business;
 use App\Models\Order;
 use App\Support\Cart;
+use App\Support\OrderCreationService;
 use App\Support\WhatsAppOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CartController extends Controller
@@ -73,31 +73,14 @@ class CartController extends Controller
                 ->with('error', 'Your cart is empty.');
         }
 
-        $subtotal = (float) $items->sum('subtotal');
-
         try {
-            $order = DB::transaction(function () use ($business, $items, $subtotal, $validated) {
-                $order = $business->orders()->create([
-                    'order_number' => Order::generateOrderNumber(),
-                    'customer_name' => $validated['customer_name'],
-                    'customer_phone' => $validated['customer_phone'],
-                    'status' => Order::STATUS_PENDING,
-                    'subtotal' => $subtotal,
-                    'total' => $subtotal,
-                ]);
-
-                foreach ($items as $item) {
-                    $order->items()->create([
-                        'product_id' => $item['product']->id,
-                        'product_name' => $item['product']->name,
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $item['product']->price,
-                        'subtotal' => $item['subtotal'],
-                    ]);
-                }
-
-                return $order;
-            });
+            $order = app(OrderCreationService::class)->create(
+                business: $business,
+                items: $items,
+                customerName: $validated['customer_name'],
+                customerPhone: $validated['customer_phone'],
+                source: Order::SOURCE_STOREFRONT,
+            );
         } catch (\Throwable $e) {
             return redirect()->route('cart.index', ['business' => $business->handle])
                 ->with('error', 'Something went wrong creating your order. Please try again.');

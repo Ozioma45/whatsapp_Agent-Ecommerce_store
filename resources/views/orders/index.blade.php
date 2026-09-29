@@ -28,7 +28,12 @@
                 <tbody class="divide-y divide-gray-200">
                     @foreach ($orders as $order)
                         <tr>
-                            <td class="px-4 py-3 font-medium text-gray-900">{{ $order->order_number }}</td>
+                            <td class="px-4 py-3 font-medium text-gray-900">
+                                {{ $order->order_number }}
+                                @if ($order->source === \App\Models\Order::SOURCE_WHATSAPP_AI)
+                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">WhatsApp AI</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-gray-500">{{ $order->customer_name ?: '—' }}</td>
                             <td class="px-4 py-3 text-gray-500">{{ $order->customer_phone ?: '—' }}</td>
                             <td class="px-4 py-3 text-gray-500">{{ number_format($order->total, 2) }}</td>

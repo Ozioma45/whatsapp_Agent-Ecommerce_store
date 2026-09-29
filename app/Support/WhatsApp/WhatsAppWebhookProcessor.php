@@ -4,19 +4,22 @@ namespace App\Support\WhatsApp;
 
 use App\Models\WhatsAppInboundMessage;
 use App\Models\WhatsAppIntegrationSetting;
+use App\Support\Ai\ConversationEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Verifies and processes one incoming WhatsApp webhook delivery.
  *
- * This is foundation only: it identifies which business a message belongs
- * to and records that it arrived, de-duplicated by WhatsApp's own message
- * id. It never generates a reply, sends a message, or creates an order —
- * those are handled by later phases, on top of this identification step.
+ * Identifies which business a message belongs to and records that it
+ * arrived, de-duplicated by WhatsApp's own message id — then, for a new,
+ * supported text message, hands it to the ConversationEngine to (maybe)
+ * generate and send an AI reply. It never creates an order.
  */
 class WhatsAppWebhookProcessor
 {
+    public function __construct(private readonly ConversationEngine $conversationEngine) {}
+
     /**
      * Verify the request against Meta's X-Hub-Signature-256 header, using
      * the platform's configured app secret. The verification token used
@@ -119,5 +122,11 @@ class WhatsAppWebhookProcessor
             'business_id' => $integration->business_id,
             'message_id' => $message->messageId,
         ]);
+
+        // Whether this actually produces a reply is entirely the engine's
+        // decision (entitlement, the business's own enabled switch,
+        // provider availability, etc.) — this call site doesn't need to
+        // know or duplicate any of those rules.
+        $this->conversationEngine->handleIncomingMessage($integration->business, $message);
     }
 }

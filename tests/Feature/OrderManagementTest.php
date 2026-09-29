@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class OrderManagementTest extends TestCase
@@ -110,5 +111,56 @@ class OrderManagementTest extends TestCase
     public function test_a_guest_cannot_access_the_orders_list(): void
     {
         $this->get('/orders')->assertRedirect(route('login'));
+    }
+
+    // --- Order source (Phase 9E) -------------------------------------
+
+    public function test_a_whatsapp_ai_order_is_labelled_in_the_list(): void
+    {
+        [$owner, $business] = $this->businessOwner();
+        $order = Order::factory()->for($business)->whatsappAi()->create();
+
+        $this->actingAs($owner)->get('/orders')
+            ->assertSee($order->order_number)
+            ->assertSee('WhatsApp AI');
+    }
+
+    public function test_a_storefront_order_is_not_labelled_as_whatsapp_ai(): void
+    {
+        [$owner, $business] = $this->businessOwner();
+        $order = Order::factory()->for($business)->create();
+
+        $this->assertSame(Order::SOURCE_STOREFRONT, $order->source);
+        $this->actingAs($owner)->get('/orders')->assertDontSee('WhatsApp AI');
+    }
+
+    public function test_the_order_detail_page_shows_its_source(): void
+    {
+        [$owner, $business] = $this->businessOwner();
+        $order = Order::factory()->for($business)->whatsappAi()->create();
+
+        $this->actingAs($owner)->get("/orders/{$order->id}")->assertSee('WhatsApp AI assistant');
+    }
+
+    public function test_existing_orders_default_to_a_storefront_source_via_the_migrations_own_default(): void
+    {
+        [$owner, $business] = $this->businessOwner();
+
+        // Simulates a pre-Phase-9E row: inserted with no "source" value at
+        // all, relying purely on the migration's column default.
+        $orderId = DB::table('orders')->insertGetId([
+            'business_id' => $business->id,
+            'order_number' => Order::generateOrderNumber(),
+            'status' => Order::STATUS_PENDING,
+            'subtotal' => 10,
+            'total' => 10,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $order = Order::findOrFail($orderId);
+
+        $this->assertSame(Order::SOURCE_STOREFRONT, $order->source);
+        $this->actingAs($owner)->get("/orders/{$order->id}")->assertOk();
     }
 }
