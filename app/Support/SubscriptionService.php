@@ -74,6 +74,42 @@ class SubscriptionService
     }
 
     /**
+     * Activates a subscription after independently verified Paystack
+     * payment (see App\Support\Payments\PaymentService) — the automated
+     * counterpart to approve(), which requires a human admin decision.
+     * Otherwise identical: whatever was previously current is superseded
+     * (marked cancelled, kept for history), and Business::plan_id /
+     * current_subscription_id are kept in sync in the same transaction.
+     *
+     * decided_by is deliberately left null: no admin made this decision.
+     */
+    public function activateFromPayment(Subscription $request, ?string $startsAt = null, ?string $expiresAt = null, ?string $billingPeriod = null): Subscription
+    {
+        return DB::transaction(function () use ($request, $startsAt, $expiresAt, $billingPeriod) {
+            $business = $request->business;
+
+            if ($business->currentSubscription && $business->currentSubscription->id !== $request->id) {
+                $business->currentSubscription->update(['status' => Subscription::STATUS_CANCELLED]);
+            }
+
+            $request->update([
+                'status' => Subscription::STATUS_ACTIVE,
+                'starts_at' => $startsAt ?: now()->toDateString(),
+                'expires_at' => $expiresAt,
+                'billing_period' => $billingPeriod,
+                'decided_at' => now(),
+            ]);
+
+            $business->update([
+                'plan_id' => $request->plan_id,
+                'current_subscription_id' => $request->id,
+            ]);
+
+            return $request->fresh();
+        });
+    }
+
+    /**
      * An admin rejects a pending request. The business's actual plan and
      * current subscription are untouched.
      */

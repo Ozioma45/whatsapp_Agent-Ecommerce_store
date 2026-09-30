@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // exception for that one path, not a global CSRF opt-out.
         $middleware->validateCsrfTokens(except: [
             'webhooks/whatsapp',
+            'webhooks/paystack',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

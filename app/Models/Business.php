@@ -134,6 +134,14 @@ class Business extends Model
     }
 
     /**
+     * This business's Paystack payment transactions (Phase 10B).
+     */
+    public function paymentTransactions(): HasMany
+    {
+        return $this->hasMany(PaymentTransaction::class);
+    }
+
+    /**
      * The one subscription currently governing this business's
      * entitlements — never simply "the latest row" (a pending request
      * doesn't change this). Null only for data that predates Phase 10A and

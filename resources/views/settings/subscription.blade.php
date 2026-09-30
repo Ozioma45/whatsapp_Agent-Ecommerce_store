@@ -73,6 +73,27 @@
                             <p class="text-sm text-gray-500">{{ $plan->formattedPrice() }} / month</p>
                             @if ($business->plan_id === $plan->id)
                                 <p class="mt-2 text-xs font-medium text-gray-500">Your current plan</p>
+                            @elseif ((float) $plan->price > 0)
+                                <form method="POST" action="{{ route('subscription.payment.initiate') }}" class="mt-2">
+                                    @csrf
+                                    <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+                                    <button type="submit" class="w-full rounded-md bg-gray-900 px-3 py-1.5 text-xs text-white hover:bg-gray-700">
+                                        Pay with Paystack
+                                    </button>
+                                </form>
+                                <p class="mt-1 text-center text-xs text-gray-400">or</p>
+                                <form method="POST" action="{{ route('subscription.request') }}">
+                                    @csrf
+                                    <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+                                    <button type="submit" class="w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                                        @disabled($pendingRequest && $pendingRequest->plan_id === $plan->id)>
+                                        @if ($pendingRequest && $pendingRequest->plan_id === $plan->id)
+                                            Requested
+                                        @else
+                                            Request review instead
+                                        @endif
+                                    </button>
+                                </form>
                             @else
                                 <form method="POST" action="{{ route('subscription.request') }}" class="mt-2">
                                     @csrf
@@ -91,9 +112,40 @@
                     @endforeach
                 </div>
                 <p class="mt-3 text-xs text-gray-500">
-                    Requesting a plan does not change your plan immediately — a platform admin reviews every request.
+                    Paying with Paystack activates your new plan as soon as payment is confirmed. Requesting a plan
+                    instead does not change your plan immediately — a platform admin reviews every request.
                 </p>
             </div>
+
+            @if ($payments->isNotEmpty())
+                <div class="rounded-lg border border-gray-200 bg-white p-6">
+                    <h2 class="mb-4 text-sm font-medium text-gray-500">Payment history</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="text-left text-gray-500">
+                                <tr>
+                                    <th class="py-2 pr-4 font-medium">Reference</th>
+                                    <th class="py-2 pr-4 font-medium">Plan</th>
+                                    <th class="py-2 pr-4 font-medium">Amount</th>
+                                    <th class="py-2 pr-4 font-medium">Status</th>
+                                    <th class="py-2 font-medium">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach ($payments as $payment)
+                                    <tr>
+                                        <td class="py-2 pr-4 text-gray-900">{{ $payment->reference }}</td>
+                                        <td class="py-2 pr-4 text-gray-500">{{ $payment->plan?->name ?? '—' }}</td>
+                                        <td class="py-2 pr-4 text-gray-500">{{ $payment->formattedAmount() }}</td>
+                                        <td class="py-2 pr-4 text-gray-500">{{ $payment->statusLabel() }}</td>
+                                        <td class="py-2 text-gray-500">{{ $payment->created_at->format('d M Y, H:i') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 @endsection

@@ -54,4 +54,22 @@ return [
         'api_version' => env('WHATSAPP_API_VERSION', 'v20.0'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Paystack
+    |--------------------------------------------------------------------------
+    |
+    | The secret key authenticates server-to-server calls (initialize,
+    | verify) and must never reach a view or frontend script. The public
+    | key is safe to expose but isn't currently used, since checkout is a
+    | server-initiated redirect to Paystack's hosted page, not inline.js.
+    |
+    */
+
+    'paystack' => [
+        'public_key' => env('PAYSTACK_PUBLIC_KEY'),
+        'secret_key' => env('PAYSTACK_SECRET_KEY'),
+        'payment_url' => env('PAYSTACK_PAYMENT_URL', 'https://api.paystack.co'),
+    ],
+
 ];

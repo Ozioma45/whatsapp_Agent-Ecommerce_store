@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One episode of a business's subscription to a plan. A business
@@ -102,11 +103,21 @@ class Subscription extends Model
 
     /**
      * The admin who approved, rejected, assigned, suspended, or
-     * reactivated this subscription, if any.
+     * reactivated this subscription, if any. Null when it was instead
+     * activated automatically by a verified Paystack payment (Phase 10B) —
+     * see SubscriptionService::activateFromPayment().
      */
     public function decidedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');
+    }
+
+    /**
+     * The payment transaction(s) made for this subscription request.
+     */
+    public function paymentTransactions(): HasMany
+    {
+        return $this->hasMany(PaymentTransaction::class);
     }
 
     /**

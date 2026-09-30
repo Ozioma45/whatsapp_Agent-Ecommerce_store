@@ -27,6 +27,7 @@ class SubscriptionController extends Controller
             'subscription' => $business->currentSubscription,
             'pendingRequest' => $business->subscriptions()->where('status', Subscription::STATUS_PENDING)->latest()->first(),
             'plans' => Plan::where('is_active', true)->orderBy('price')->get(),
+            'payments' => $business->paymentTransactions()->with('plan')->latest()->limit(10)->get(),
         ]);
     }
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FeatureController as AdminFeatureController;
+use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
@@ -13,9 +14,11 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStoreController;
 use App\Http\Controllers\Settings\AiAssistantSettingsController;
+use App\Http\Controllers\Settings\PaymentController;
 use App\Http\Controllers\Settings\StoreSettingsController;
 use App\Http\Controllers\Settings\SubscriptionController;
 use App\Http\Controllers\WhatsAppWebhookController;
@@ -29,6 +32,10 @@ Route::domain(config('app.domain'))->group(function () {
     // it, and it authenticates itself via request signature, not a session.
     Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('webhooks.whatsapp.verify');
     Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle'])->name('webhooks.whatsapp.handle');
+
+    // Same reasoning as the WhatsApp webhook above: Paystack calls this
+    // directly with no session, authenticating itself via signature.
+    Route::post('webhooks/paystack', [PaystackWebhookController::class, 'handle'])->name('webhooks.paystack.handle');
 
     Route::middleware('maintenance')->group(function () {
         Route::get('/', function () {
@@ -52,6 +59,8 @@ Route::domain(config('app.domain'))->group(function () {
 
         Route::get('subscription', [SubscriptionController::class, 'edit'])->name('subscription.edit');
         Route::post('subscription/request', [SubscriptionController::class, 'requestChange'])->name('subscription.request');
+        Route::post('subscription/pay', [PaymentController::class, 'initiate'])->name('subscription.payment.initiate');
+        Route::get('subscription/callback', [PaymentController::class, 'callback'])->name('subscription.payment.callback');
 
         Route::get('ai-assistant', [AiAssistantSettingsController::class, 'edit'])->name('ai.edit');
         Route::put('ai-assistant', [AiAssistantSettingsController::class, 'update'])->name('ai.update');
@@ -81,6 +90,9 @@ Route::domain(config('app.domain'))->group(function () {
         Route::get('subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
         Route::patch('subscriptions/{subscription}/approve', [AdminSubscriptionController::class, 'approve'])->name('subscriptions.approve');
         Route::patch('subscriptions/{subscription}/reject', [AdminSubscriptionController::class, 'reject'])->name('subscriptions.reject');
+
+        Route::get('payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+        Route::get('payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
 
         Route::get('plans', [AdminPlanController::class, 'index'])->name('plans.index');
         Route::get('plans/{plan}', [AdminPlanController::class, 'show'])->name('plans.show');

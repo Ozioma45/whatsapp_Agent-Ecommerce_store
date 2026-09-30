@@ -15,6 +15,7 @@
                 ['route' => 'admin.businesses.index', 'match' => 'admin.businesses.*', 'label' => 'Businesses'],
                 ['route' => 'admin.plans.index', 'match' => 'admin.plans.*', 'label' => 'Plans'],
                 ['route' => 'admin.subscriptions.index', 'match' => 'admin.subscriptions.*', 'label' => 'Subscriptions'],
+                ['route' => 'admin.payments.index', 'match' => 'admin.payments.*', 'label' => 'Payments'],
                 ['route' => 'admin.features.index', 'match' => 'admin.features.*', 'label' => 'Features'],
                 ['route' => 'admin.users.index', 'match' => 'admin.users.*', 'label' => 'Users'],
                 ['route' => 'admin.settings.edit', 'match' => 'admin.settings.*', 'label' => 'Settings'],
