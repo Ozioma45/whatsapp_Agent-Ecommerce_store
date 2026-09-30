@@ -10,6 +10,7 @@
             <thead class="bg-gray-50 text-left text-gray-500">
                 <tr>
                     <th class="px-4 py-3 font-medium">Plan</th>
+                    <th class="px-4 py-3 font-medium">Price</th>
                     <th class="px-4 py-3 font-medium">Status</th>
                     <th class="px-4 py-3 font-medium">Businesses</th>
                     <th class="px-4 py-3 font-medium"></th>
@@ -19,6 +20,7 @@
                 @foreach ($plans as $plan)
                     <tr>
                         <td class="px-4 py-3 text-gray-900">{{ $plan->name }}</td>
+                        <td class="px-4 py-3 text-gray-500">{{ $plan->formattedPrice() }}</td>
                         <td class="px-4 py-3">
                             @if ($plan->is_active)
                                 <span class="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">Active</span>

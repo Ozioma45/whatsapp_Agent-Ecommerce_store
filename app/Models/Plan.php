@@ -41,6 +41,16 @@ class Plan extends Model
     }
 
     /**
+     * This plan's price, formatted with the Naira sign — the one place
+     * that formatting is defined, so the admin plans pages and the
+     * business subscription page always display it the same way.
+     */
+    public function formattedPrice(): string
+    {
+        return '₦'.number_format((float) $this->price, 2);
+    }
+
+    /**
      * The features entitled to this plan, with the plan's own enabled/limit
      * values for each available via the pivot (see plan_features).
      */

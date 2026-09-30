@@ -31,7 +31,13 @@ class PlanController extends Controller
     }
 
     /**
-     * Update a plan's own fields and its feature entitlements.
+     * Update a plan's own fields (including its price) and its feature
+     * entitlements.
+     *
+     * Price is validated and saved independently of the feature loop
+     * below, so changing it never touches a plan's features, limits, or
+     * any business's existing subscription/plan assignment — those are
+     * separate tables this method never writes to.
      *
      * This reuses the existing Phase 8 plan_features pivot exclusively —
      * it never creates a feature, and it only ever writes to pivot rows
@@ -46,11 +52,15 @@ class PlanController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
+            // Naira has no subdivision finer than kobo, so at most 2
+            // decimal places — matches the price column's decimal(10,2).
+            'price' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
         ]);
 
         $plan->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
+            'price' => $validated['price'],
             'is_active' => $request->boolean('is_active'),
         ]);
 

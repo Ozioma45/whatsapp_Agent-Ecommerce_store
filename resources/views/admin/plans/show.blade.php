@@ -43,6 +43,16 @@
                         class="mt-1 block w-full max-w-lg rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500">{{ old('description', $plan->description) }}</textarea>
                 </div>
 
+                <div>
+                    <label for="price" class="block text-sm font-medium text-gray-700">Price (₦)</label>
+                    <input id="price" type="number" step="0.01" min="0" name="price" value="{{ old('price', $plan->price) }}" required
+                        class="mt-1 block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                    <p class="mt-1 text-xs text-gray-500">Shown to business owners on their subscription page. This never changes the plan's features or any business's current subscription.</p>
+                    @error('price')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <label class="flex items-center gap-2 text-sm text-gray-700">
                     <input type="checkbox" name="is_active" value="1" class="rounded border-gray-300" @checked(old('is_active', $plan->is_active))>
                     Active (can be assigned to businesses)

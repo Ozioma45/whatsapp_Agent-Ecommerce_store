@@ -46,6 +46,7 @@ class AdminPlanManagementTest extends TestCase
         return [
             'name' => $plan->name,
             'description' => $plan->description,
+            'price' => (string) $plan->price,
             'is_active' => $plan->is_active ? '1' : '0',
             'features' => $features,
         ];

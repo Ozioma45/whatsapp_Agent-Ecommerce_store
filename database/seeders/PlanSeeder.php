@@ -24,9 +24,12 @@ class PlanSeeder extends Seeder
      */
     public function run(): void
     {
-        // Prices are illustrative placeholders for the subscription pages
-        // to display — like the entitlements above, not final commercial
-        // pricing, and no payment gateway reads them (Phase 10A).
+        // Prices are illustrative placeholders, seeded once when a plan is
+        // first created — not final commercial pricing, and no payment
+        // gateway reads them (Phase 10A). Price is admin-editable from the
+        // plans page (see Admin\PlanController), so it is deliberately
+        // excluded from the updateOrCreate() below: re-running this seeder
+        // must never overwrite a price an admin has since configured.
         $plans = [
             Plan::STANDARD => ['name' => 'Standard', 'description' => 'The default plan every new business starts on.', 'price' => 0],
             Plan::PRO => ['name' => 'Pro', 'description' => 'Adds custom branding and higher limits.', 'price' => 15000],
@@ -36,7 +39,16 @@ class PlanSeeder extends Seeder
         $planModels = [];
 
         foreach ($plans as $slug => $attributes) {
-            $planModels[$slug] = Plan::updateOrCreate(['slug' => $slug], $attributes + ['is_active' => true]);
+            $price = $attributes['price'];
+            unset($attributes['price']);
+
+            $plan = Plan::updateOrCreate(['slug' => $slug], $attributes + ['is_active' => true]);
+
+            if ($plan->wasRecentlyCreated) {
+                $plan->update(['price' => $price]);
+            }
+
+            $planModels[$slug] = $plan;
         }
 
         $features = [

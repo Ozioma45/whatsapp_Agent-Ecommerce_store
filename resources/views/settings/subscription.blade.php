@@ -70,7 +70,7 @@
                     @foreach ($plans as $plan)
                         <div class="rounded-lg border border-gray-200 p-4 {{ $business->plan_id === $plan->id ? 'bg-gray-50' : '' }}">
                             <p class="font-medium text-gray-900">{{ $plan->name }}</p>
-                            <p class="text-sm text-gray-500">{{ number_format($plan->price, 2) }} / month</p>
+                            <p class="text-sm text-gray-500">{{ $plan->formattedPrice() }} / month</p>
                             @if ($business->plan_id === $plan->id)
                                 <p class="mt-2 text-xs font-medium text-gray-500">Your current plan</p>
                             @else
