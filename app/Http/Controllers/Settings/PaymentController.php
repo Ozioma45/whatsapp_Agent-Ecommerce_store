@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Enums\BillingPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentTransaction;
 use App\Models\Plan;
@@ -14,10 +15,15 @@ use Illuminate\Validation\Rule;
 class PaymentController extends Controller
 {
     /**
-     * Start a Paystack payment for a plan. The business is always
-     * resolved from the authenticated user — never from anything the
-     * request submits — so an owner can never pay for another business by
-     * manipulating form fields.
+     * Start a Paystack payment for a plan — a renewal (same plan as
+     * current), an upgrade, or a downgrade; PaymentService decides which
+     * once payment is verified. The business is always resolved from the
+     * authenticated user — never from anything the request submits — so
+     * an owner can never pay for another business by manipulating form
+     * fields. Billing period is validated against the fixed enum, never
+     * an arbitrary string; the amount charged is always the plan's
+     * current database price (times that period's fixed multiplier) —
+     * nothing the browser submits is ever trusted for price or period.
      */
     public function initiate(Request $request, PaymentService $service): RedirectResponse
     {
@@ -25,17 +31,16 @@ class PaymentController extends Controller
 
         $validated = $request->validate([
             'plan_id' => ['required', Rule::exists('plans', 'id')->where('is_active', true)],
+            'billing_period' => ['nullable', Rule::in(BillingPeriod::values())],
         ]);
 
         $plan = Plan::findOrFail($validated['plan_id']);
-
-        if ($business->plan_id === $plan->id) {
-            return redirect()->route('subscription.edit')->with('error', 'You are already on this plan.');
-        }
+        $billingPeriod = BillingPeriod::fromValue($validated['billing_period'] ?? null);
 
         $result = $service->initiate(
             $business,
             $plan,
+            $billingPeriod,
             $request->user()->email,
             route('subscription.payment.callback'),
         );
@@ -77,6 +82,12 @@ class PaymentController extends Controller
     private function flashFor(PaymentVerificationOutcome $outcome): array
     {
         if ($outcome->status === PaymentTransaction::STATUS_SUCCESSFUL) {
+            $subscription = $outcome->transaction->subscription;
+
+            if ($subscription && $subscription->isScheduledChange()) {
+                return ['status' => 'Payment received — your plan will change on '.$subscription->starts_at?->format('d M Y').', once your current period ends.'];
+            }
+
             return ['status' => 'Payment received — your plan has been updated.'];
         }
 

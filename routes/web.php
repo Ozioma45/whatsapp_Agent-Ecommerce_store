@@ -59,6 +59,8 @@ Route::domain(config('app.domain'))->group(function () {
 
         Route::get('subscription', [SubscriptionController::class, 'edit'])->name('subscription.edit');
         Route::post('subscription/request', [SubscriptionController::class, 'requestChange'])->name('subscription.request');
+        Route::post('subscription/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
+        Route::post('subscription/resume', [SubscriptionController::class, 'resume'])->name('subscription.resume');
         Route::post('subscription/pay', [PaymentController::class, 'initiate'])->name('subscription.payment.initiate');
         Route::get('subscription/callback', [PaymentController::class, 'callback'])->name('subscription.payment.callback');
 

@@ -2,32 +2,43 @@
 
 namespace App\Support\Payments;
 
+use App\Enums\BillingPeriod;
 use App\Models\Business;
 use App\Models\PaymentTransaction;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Notifications\PaymentFailed;
 use App\Support\SubscriptionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Connects Paystack to the existing subscription workflow. Integrates
- * with SubscriptionService (reusing requestPlanChange() for the pending
- * request and the new activateFromPayment() for activation) rather than
+ * with SubscriptionService (requestPlanChange() for the pending request;
+ * activateFromPayment() / scheduleDowngrade() for activation) rather than
  * writing to Business/Subscription directly — this is the one place a
  * payment ever results in a subscription change.
  *
- * The application has no billing-period selection anywhere in its UI, so
- * this deliberately does not invent one: every successful payment grants
- * exactly one fixed month of access ('monthly', expires_at = start + 1
- * month) and nothing renews automatically — Phase 10B explicitly excludes
- * recurring billing. A business simply pays again via the same flow to
- * extend access.
+ * Billing period: the owner may choose monthly or yearly when paying (see
+ * BillingPeriod). There is still only one price per plan in the database
+ * (plans.price, labelled "/ month" throughout the UI) — yearly is a fixed,
+ * documented 12x multiplier of that same database price, computed here,
+ * never a separate price a browser can submit or a value invented ad hoc.
+ *
+ * Upgrade vs. downgrade vs. renewal, decided once payment is verified:
+ *   - Same plan as current, still in good standing → renewal; the new
+ *     period starts when the current one ends (see
+ *     SubscriptionService::activateFromPayment()).
+ *   - A higher-priced plan → upgrade; activates immediately, full price,
+ *     no proration (the previous period's remaining days are forfeited).
+ *   - A lower-priced plan while the current one is still active →
+ *     downgrade; paid for now, but only takes effect once the current
+ *     period ends (see SubscriptionService::scheduleDowngrade() and the
+ *     subscriptions:expire command, which promotes it).
  */
 class PaymentService
 {
-    private const BILLING_PERIOD = 'monthly';
-
     public function __construct(
         private readonly PaystackClient $paystack,
         private readonly SubscriptionService $subscriptions,
@@ -35,25 +46,26 @@ class PaymentService
 
     /**
      * Start a payment for one business, for one plan. The amount is
-     * always the plan's current database price — nothing the browser
-     * submits is ever trusted for it. This never activates anything; it
-     * only creates a pending subscription request (or reuses an existing
+     * always the plan's current database price (times the billing
+     * period's fixed multiplier) — nothing the browser submits is ever
+     * trusted for it. This never activates anything; it only creates a
+     * pending subscription request (or reuses an existing, not-yet-paid
      * one, via SubscriptionService::requestPlanChange()) and a pending
      * payment transaction, then asks Paystack for a checkout URL.
      */
-    public function initiate(Business $business, Plan $plan, string $email, string $callbackUrl): PaymentInitiationResult
+    public function initiate(Business $business, Plan $plan, BillingPeriod $billingPeriod, string $email, string $callbackUrl): PaymentInitiationResult
     {
         if (! $plan->is_active) {
             return PaymentInitiationResult::failure('This plan is not available.');
         }
 
-        $amountInKobo = (int) round(((float) $plan->price) * 100);
+        $amountInKobo = (int) round(((float) $plan->price) * 100) * $billingPeriod->priceMultiplier();
 
         if ($amountInKobo <= 0) {
             return PaymentInitiationResult::failure('This plan does not require payment.');
         }
 
-        $subscriptionRequest = $this->subscriptions->requestPlanChange($business, $plan);
+        $subscriptionRequest = $this->subscriptions->requestPlanChange($business, $plan, $billingPeriod);
 
         $transaction = $business->paymentTransactions()->create([
             'plan_id' => $plan->id,
@@ -82,10 +94,11 @@ class PaymentService
 
     /**
      * Independently verify one transaction with Paystack and, only if
-     * every check passes, activate its subscription. Safe to call more
-     * than once (from the callback and/or the webhook, in either order,
-     * even concurrently) — a row lock plus an already-processed guard
-     * ensure a transaction is only ever resolved once.
+     * every check passes, activate (or schedule) its subscription. Safe
+     * to call more than once (from the callback and/or the webhook, in
+     * either order, even concurrently) — a row lock plus an
+     * already-processed guard ensure a transaction is only ever resolved
+     * once.
      *
      * $expectedBusiness, when given, must match the transaction's
      * business — this is what stops a transaction belonging to one
@@ -98,7 +111,7 @@ class PaymentService
             return PaymentVerificationOutcome::rejected($transaction, PaymentVerificationOutcome::NOT_OWNER);
         }
 
-        return DB::transaction(function () use ($transaction) {
+        $outcome = DB::transaction(function () use ($transaction) {
             /** @var PaymentTransaction $locked */
             $locked = PaymentTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
 
@@ -160,13 +173,19 @@ class PaymentService
 
             return PaymentVerificationOutcome::success($locked->fresh());
         });
+
+        if (! $outcome->successful && in_array($outcome->status, [PaymentTransaction::STATUS_FAILED, PaymentTransaction::STATUS_ABANDONED], true)) {
+            $this->notifyPaymentFailed($outcome->transaction);
+        }
+
+        return $outcome;
     }
 
     /**
-     * Activates the transaction's linked subscription request, if it's
-     * still pending — a second verification of the same (already
-     * successful) transaction never reaches here, so this never runs
-     * twice for the same payment.
+     * Decides, now that payment is verified, whether this is a renewal,
+     * an upgrade, or a downgrade, and activates (or schedules)
+     * accordingly. A second verification of the same (already
+     * successful) transaction never reaches here.
      */
     private function activateSubscription(PaymentTransaction $transaction): void
     {
@@ -180,11 +199,36 @@ class PaymentService
             return;
         }
 
-        $this->subscriptions->activateFromPayment(
-            $subscription,
-            startsAt: now()->toDateString(),
-            expiresAt: now()->addMonth()->toDateString(),
-            billingPeriod: self::BILLING_PERIOD,
-        );
+        $business = $transaction->business;
+        $current = $business?->currentSubscription;
+        $billingPeriod = BillingPeriod::fromValue($subscription->billing_period);
+
+        $isDowngrade = $current
+            && $current->isInGoodStanding()
+            && $current->plan_id !== $subscription->plan_id
+            && $current->plan
+            && $subscription->plan
+            && (float) $subscription->plan->price < (float) $current->plan->price;
+
+        if ($isDowngrade) {
+            $this->subscriptions->scheduleDowngrade($subscription, $current, $billingPeriod);
+
+            return;
+        }
+
+        $this->subscriptions->activateFromPayment($subscription, $billingPeriod);
+    }
+
+    /**
+     * Never lets a notification failure interrupt verification — this is
+     * called after the verification transaction has already committed.
+     */
+    private function notifyPaymentFailed(PaymentTransaction $transaction): void
+    {
+        try {
+            $transaction->business?->owner?->notify(new PaymentFailed($transaction));
+        } catch (Throwable $e) {
+            Log::warning('payment.notify.failed_failed', ['transaction_id' => $transaction->id]);
+        }
     }
 }

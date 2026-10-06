@@ -96,6 +96,7 @@
                                 <tr>
                                     <th class="py-2 pr-4 font-medium">Plan</th>
                                     <th class="py-2 pr-4 font-medium">Status</th>
+                                    <th class="py-2 pr-4 font-medium">Billing</th>
                                     <th class="py-2 pr-4 font-medium">Start</th>
                                     <th class="py-2 font-medium">Expiry</th>
                                 </tr>
@@ -104,7 +105,16 @@
                                 @foreach ($subscriptionHistory as $record)
                                     <tr class="{{ $business->current_subscription_id === $record->id ? 'font-medium text-gray-900' : 'text-gray-500' }}">
                                         <td class="py-2 pr-4">{{ $record->plan?->name ?? 'Unknown plan' }}</td>
-                                        <td class="py-2 pr-4">{{ $record->statusLabel() }}</td>
+                                        <td class="py-2 pr-4">
+                                            {{ $record->statusLabel() }}
+                                            @if ($record->hasRequestedCancellation() && $record->status === \App\Models\Subscription::STATUS_ACTIVE)
+                                                <span class="text-xs text-yellow-700">(cancelling)</span>
+                                            @endif
+                                            @if ($record->isScheduledChange())
+                                                <span class="text-xs text-blue-700">(scheduled)</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-2 pr-4">{{ $record->billing_period ? ucfirst($record->billing_period) : '—' }}</td>
                                         <td class="py-2 pr-4">{{ $record->starts_at?->format('d M Y') ?? '—' }}</td>
                                         <td class="py-2">{{ $record->expires_at?->format('d M Y') ?? '—' }}</td>
                                     </tr>
@@ -143,10 +153,32 @@
                         <dd class="text-gray-900">{{ $business->currentSubscription?->statusLabel() ?? 'Active' }}</dd>
                     </div>
                     <div>
+                        <dt class="text-gray-500">Billing period</dt>
+                        <dd class="text-gray-900">{{ $business->currentSubscription?->billing_period ? ucfirst($business->currentSubscription->billing_period) : '—' }}</dd>
+                    </div>
+                    <div>
                         <dt class="text-gray-500">Expiry</dt>
                         <dd class="text-gray-900">{{ $business->currentSubscription?->expires_at?->format('d M Y') ?? 'Does not expire' }}</dd>
                     </div>
+                    <div>
+                        <dt class="text-gray-500">Cancellation</dt>
+                        <dd class="text-gray-900">
+                            {{ $business->currentSubscription?->hasRequestedCancellation() ? 'Requested — will not renew' : 'Not requested' }}
+                        </dd>
+                    </div>
                 </dl>
+
+                @if ($pendingOrScheduled)
+                    <p class="mt-4 rounded-md bg-blue-50 px-4 py-3 text-xs text-blue-800">
+                        {{ $pendingOrScheduled->isScheduledChange() ? 'Scheduled change' : 'Pending request' }}
+                        to <strong>{{ $pendingOrScheduled->plan?->name ?? 'a plan' }}</strong>
+                        @if ($pendingOrScheduled->isScheduledChange())
+                            , effective {{ $pendingOrScheduled->starts_at?->format('d M Y') }}.
+                        @else
+                            , awaiting review.
+                        @endif
+                    </p>
+                @endif
 
                 @if ($business->currentSubscription)
                     <div class="mt-4 flex gap-2">
@@ -195,6 +227,19 @@
                         <label class="block text-xs text-gray-500">Expiry date (optional)</label>
                         <input type="date" name="expires_at" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
                         @error('expires_at')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-500">Billing period (optional)</label>
+                        <select name="billing_period" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
+                            <option value="">—</option>
+                            @foreach (\App\Enums\BillingPeriod::cases() as $period)
+                                <option value="{{ $period->value }}">{{ $period->label() }}</option>
+                            @endforeach
+                        </select>
+                        @error('billing_period')
                             <p class="text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>

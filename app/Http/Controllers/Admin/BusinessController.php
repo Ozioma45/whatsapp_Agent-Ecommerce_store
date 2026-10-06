@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\BillingPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Plan;
+use App\Models\Subscription;
 use App\Support\SubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,6 +59,8 @@ class BusinessController extends Controller
             'categoryCount' => $business->categories()->count(),
             'orderCount' => $business->orders()->count(),
             'subscriptionHistory' => $business->subscriptions()->with('plan')->latest()->get(),
+            'pendingOrScheduled' => $business->subscriptions()->where('status', Subscription::STATUS_PENDING)
+                ->with('plan')->latest()->first(),
         ]);
     }
 
@@ -77,7 +81,7 @@ class BusinessController extends Controller
             'plan_id' => ['required', Rule::exists('plans', 'id')->where('is_active', true)],
             'starts_at' => ['nullable', 'date'],
             'expires_at' => ['nullable', 'date', 'after:starts_at'],
-            'billing_period' => ['nullable', Rule::in(['monthly', 'yearly'])],
+            'billing_period' => ['nullable', Rule::in(BillingPeriod::values())],
         ]);
 
         $service->assignPlanDirectly(

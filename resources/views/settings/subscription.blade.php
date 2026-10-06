@@ -15,7 +15,7 @@
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             <div class="rounded-lg border border-gray-200 bg-white p-6">
-                <h2 class="mb-4 text-sm font-medium text-gray-500">Current plan</h2>
+                <h2 class="mb-4 text-sm font-medium text-gray-500">Current subscription</h2>
                 <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <div>
                         <dt class="text-gray-500">Plan</dt>
@@ -26,6 +26,10 @@
                         <dd class="text-gray-900">{{ $subscription?->statusLabel() ?? 'Active' }}</dd>
                     </div>
                     <div>
+                        <dt class="text-gray-500">Billing period</dt>
+                        <dd class="text-gray-900">{{ $subscription?->billing_period ? ucfirst($subscription->billing_period) : '—' }}</dd>
+                    </div>
+                    <div>
                         <dt class="text-gray-500">Start date</dt>
                         <dd class="text-gray-900">{{ $subscription?->starts_at?->format('d M Y') ?? '—' }}</dd>
                     </div>
@@ -33,11 +37,47 @@
                         <dt class="text-gray-500">Expiry date</dt>
                         <dd class="text-gray-900">{{ $subscription?->expires_at?->format('d M Y') ?? 'Does not expire' }}</dd>
                     </div>
+                    @if ($subscription?->daysRemaining() !== null)
+                        <div>
+                            <dt class="text-gray-500">Days remaining</dt>
+                            <dd class="text-gray-900">{{ $subscription->daysRemaining() }}</dd>
+                        </div>
+                    @endif
                 </dl>
+
+                @if ($subscription && $subscription->isInGoodStanding())
+                    <div class="mt-4">
+                        @if ($subscription->hasRequestedCancellation())
+                            <p class="rounded-md bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                                Your subscription will not renew after {{ $subscription->expires_at?->format('d M Y') }}. You can keep using
+                                your plan until then.
+                            </p>
+                            <form method="POST" action="{{ route('subscription.resume') }}" class="mt-2">
+                                @csrf
+                                <button type="submit" class="text-xs text-gray-700 underline hover:text-gray-900">Resume renewal</button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('subscription.cancel') }}"
+                                onsubmit="return confirm('Cancel renewal? You will keep your current plan until it expires, then it will not continue.');">
+                                @csrf
+                                <button type="submit" class="text-xs text-red-600 underline hover:text-red-700">Cancel renewal</button>
+                            </form>
+                        @endif
+                    </div>
+                @endif
 
                 @if ($pendingRequest)
                     <p class="mt-4 rounded-md bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-                        A request to move to the <strong>{{ $pendingRequest->plan?->name ?? 'selected' }}</strong> plan is pending review.
+                        <strong>Pending plan change:</strong> a request to move to the
+                        <strong>{{ $pendingRequest->plan?->name ?? 'selected' }}</strong> plan is awaiting admin review. Your current plan is unaffected until then.
+                    </p>
+                @endif
+
+                @if ($scheduledChange)
+                    <p class="mt-4 rounded-md bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                        <strong>Scheduled change:</strong> your plan will change to
+                        <strong>{{ $scheduledChange->plan?->name ?? 'the selected plan' }}</strong> on {{ $scheduledChange->starts_at?->format('d M Y') }},
+                        once your current paid period ends. You've already paid for that period — your current plan stays active until then.
                     </p>
                 @endif
             </div>
@@ -68,19 +108,38 @@
                 <h2 class="mb-4 text-sm font-medium text-gray-500">Available plans</h2>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     @foreach ($plans as $plan)
-                        <div class="rounded-lg border border-gray-200 p-4 {{ $business->plan_id === $plan->id ? 'bg-gray-50' : '' }}">
+                        @php
+                            $isCurrent = $business->plan_id === $plan->id;
+                            $isPaid = (float) $plan->price > 0;
+                            $isUpgrade = ! $isCurrent && $business->plan && (float) $plan->price > (float) $business->plan->price;
+                            $isDowngrade = ! $isCurrent && $business->plan && (float) $plan->price < (float) $business->plan->price;
+                        @endphp
+                        <div class="rounded-lg border border-gray-200 p-4 {{ $isCurrent ? 'bg-gray-50' : '' }}">
                             <p class="font-medium text-gray-900">{{ $plan->name }}</p>
                             <p class="text-sm text-gray-500">{{ $plan->formattedPrice() }} / month</p>
-                            @if ($business->plan_id === $plan->id)
+
+                            @if ($isCurrent)
                                 <p class="mt-2 text-xs font-medium text-gray-500">Your current plan</p>
-                            @elseif ((float) $plan->price > 0)
+                                @if ($isPaid)
+                                    <form method="POST" action="{{ route('subscription.payment.initiate') }}" class="mt-2">
+                                        @csrf
+                                        <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+                                        <button type="submit" class="w-full rounded-md bg-gray-900 px-3 py-1.5 text-xs text-white hover:bg-gray-700">
+                                            Renew with Paystack
+                                        </button>
+                                    </form>
+                                @endif
+                            @elseif ($isPaid)
                                 <form method="POST" action="{{ route('subscription.payment.initiate') }}" class="mt-2">
                                     @csrf
                                     <input type="hidden" name="plan_id" value="{{ $plan->id }}">
                                     <button type="submit" class="w-full rounded-md bg-gray-900 px-3 py-1.5 text-xs text-white hover:bg-gray-700">
-                                        Pay with Paystack
+                                        {{ $isUpgrade ? 'Upgrade' : ($isDowngrade ? 'Downgrade' : 'Pay') }} with Paystack
                                     </button>
                                 </form>
+                                @if ($isDowngrade)
+                                    <p class="mt-1 text-center text-[11px] text-gray-400">Takes effect after your current period ends</p>
+                                @endif
                                 <p class="mt-1 text-center text-xs text-gray-400">or</p>
                                 <form method="POST" action="{{ route('subscription.request') }}">
                                     @csrf
@@ -112,8 +171,9 @@
                     @endforeach
                 </div>
                 <p class="mt-3 text-xs text-gray-500">
-                    Paying with Paystack activates your new plan as soon as payment is confirmed. Requesting a plan
-                    instead does not change your plan immediately — a platform admin reviews every request.
+                    Paying with Paystack activates a renewal or upgrade as soon as payment is confirmed. A downgrade is paid for now
+                    but only takes effect once your current paid period ends — you keep your current plan until then. Requesting a
+                    plan instead does not change anything immediately — a platform admin reviews every such request.
                 </p>
             </div>
 

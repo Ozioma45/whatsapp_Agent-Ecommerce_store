@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * pending request sits alongside the still-current row until an admin
  * decides it, and is never itself the current pointer.
  */
-#[Fillable(['business_id', 'plan_id', 'status', 'billing_period', 'starts_at', 'expires_at', 'requested_at', 'decided_at', 'decided_by'])]
+#[Fillable(['business_id', 'plan_id', 'status', 'billing_period', 'starts_at', 'expires_at', 'requested_at', 'decided_at', 'decided_by', 'cancelled_at', 'expiry_reminder_sent_at'])]
 class Subscription extends Model
 {
     use HasFactory;
@@ -82,6 +82,8 @@ class Subscription extends Model
             'expires_at' => 'date',
             'requested_at' => 'datetime',
             'decided_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'expiry_reminder_sent_at' => 'datetime',
         ];
     }
 
@@ -149,5 +151,43 @@ class Subscription extends Model
         }
 
         return ucfirst($this->status);
+    }
+
+    /**
+     * Whether the owner has asked for this subscription not to continue
+     * past expires_at. Deliberately does not itself affect
+     * isInGoodStanding() — see the cancelled_at migration note — only the
+     * lifecycle command (subscriptions:expire) turns this into
+     * status=cancelled once expires_at actually passes.
+     */
+    public function hasRequestedCancellation(): bool
+    {
+        return $this->cancelled_at !== null;
+    }
+
+    /**
+     * A still-pending subscription that has already been paid for and
+     * given a future start date — a downgrade awaiting the end of the
+     * current paid period (see SubscriptionService::scheduleDowngrade()).
+     * Never itself the business's current_subscription_id.
+     */
+    public function isScheduledChange(): bool
+    {
+        return $this->status === self::STATUS_PENDING
+            && $this->starts_at !== null
+            && $this->paymentTransactions()->where('status', PaymentTransaction::STATUS_SUCCESSFUL)->exists();
+    }
+
+    /**
+     * Whole days left until expires_at, or null when there is no expiry
+     * or it has already passed.
+     */
+    public function daysRemaining(): ?int
+    {
+        if ($this->expires_at === null || $this->isEffectivelyExpired()) {
+            return null;
+        }
+
+        return (int) now()->startOfDay()->diffInDays($this->expires_at->copy()->startOfDay(), false);
     }
 }

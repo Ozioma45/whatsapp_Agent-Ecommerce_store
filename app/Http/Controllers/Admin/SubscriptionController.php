@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\BillingPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\Subscription;
 use App\Support\SubscriptionService;
@@ -39,7 +40,7 @@ class SubscriptionController extends Controller
         $validated = $request->validate([
             'starts_at' => ['nullable', 'date'],
             'expires_at' => ['nullable', 'date', 'after:starts_at'],
-            'billing_period' => ['nullable', Rule::in(['monthly', 'yearly'])],
+            'billing_period' => ['nullable', Rule::in(BillingPeriod::values())],
         ]);
 
         $service->approve(

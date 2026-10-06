@@ -49,7 +49,7 @@ class SubscriptionPageTest extends TestCase
 
         $response->assertOk();
         $response->assertDontSee('Suspended');
-        $response->assertDontSee('pending review');
+        $response->assertDontSee('Pending plan change');
     }
 
     public function test_plan_features_and_prices_are_displayed(): void
@@ -73,7 +73,7 @@ class SubscriptionPageTest extends TestCase
 
         $this->actingAs($business->owner)->get('/subscription')
             ->assertOk()
-            ->assertSee('pending review');
+            ->assertSee('Pending plan change');
     }
 
     public function test_an_expired_subscription_status_is_visible(): void
