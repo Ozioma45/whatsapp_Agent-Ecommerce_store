@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\PaymentTransaction;
 use App\Models\Subscription;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -29,13 +30,29 @@ class SubscriptionActivated extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $planName = $this->subscription->plan?->name ?? 'your plan';
+        $businessName = $this->subscription->business?->name ?? 'your business';
 
-        return (new MailMessage)
+        // The payment that actually activated this period, if any (an
+        // admin-assigned subscription has none) — never a raw payload,
+        // just the already-safe amount already stored on the transaction.
+        $payment = $this->subscription->paymentTransactions()
+            ->where('status', PaymentTransaction::STATUS_SUCCESSFUL)
+            ->latest()
+            ->first();
+
+        $message = (new MailMessage)
             ->subject("Your {$planName} subscription is now active")
             ->greeting('Hello!')
-            ->line("Your subscription to {$planName} is now active.")
-            ->line('Billing period: '.ucfirst((string) $this->subscription->billing_period))
-            ->line('Starts: '.$this->subscription->starts_at?->format('d M Y'))
-            ->line('Expires: '.($this->subscription->expires_at?->format('d M Y') ?? 'Does not expire'));
+            ->line("The subscription for {$businessName} to {$planName} is now active.")
+            ->line('Billing period: '.ucfirst((string) $this->subscription->billing_period));
+
+        if ($payment) {
+            $message->line('Amount paid: '.$payment->formattedAmount());
+        }
+
+        return $message
+            ->line('Start date: '.$this->subscription->starts_at?->format('d M Y'))
+            ->line('Expiry date: '.($this->subscription->expires_at?->format('d M Y') ?? 'Does not expire'))
+            ->action('View your subscription', route('subscription.edit'));
     }
 }

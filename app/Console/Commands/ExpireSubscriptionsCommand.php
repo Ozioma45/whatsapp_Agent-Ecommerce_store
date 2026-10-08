@@ -26,11 +26,6 @@ use Throwable;
 class ExpireSubscriptionsCommand extends Command
 {
     /**
-     * How many days before expiry to send the "expiring soon" reminder.
-     */
-    private const REMINDER_WINDOW_DAYS = 3;
-
-    /**
      * The name and signature of the console command.
      *
      * @var string
@@ -75,18 +70,22 @@ class ExpireSubscriptionsCommand extends Command
 
     /**
      * Sends one "expiring soon" reminder per subscription that's within
-     * the reminder window and hasn't already received one — guarded by
-     * expiry_reminder_sent_at, set right after a successful send, so a
-     * daily (or more frequent) run never sends duplicates.
+     * the reminder window (config('subscriptions.expiry_reminder_days'),
+     * platform configuration — never business-configurable) and hasn't
+     * already received one — guarded by expiry_reminder_sent_at, set
+     * right after a successful send, so a daily (or more frequent) run
+     * never sends duplicates. Only ever matches status=active rows, so
+     * expired and suspended subscriptions are never reminded.
      */
     private function sendExpiryReminders(): int
     {
         $sent = 0;
+        $windowDays = (int) config('subscriptions.expiry_reminder_days', 7);
 
         Subscription::where('status', Subscription::STATUS_ACTIVE)
             ->whereNull('expiry_reminder_sent_at')
             ->whereNotNull('expires_at')
-            ->whereBetween('expires_at', [now()->toDateString(), now()->addDays(self::REMINDER_WINDOW_DAYS)->toDateString()])
+            ->whereBetween('expires_at', [now()->toDateString(), now()->addDays($windowDays)->toDateString()])
             ->get()
             ->each(function (Subscription $subscription) use (&$sent) {
                 $this->notify($subscription, new SubscriptionExpiringSoon($subscription));
